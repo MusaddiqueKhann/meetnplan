@@ -417,40 +417,78 @@ export default function Calendar({ onOpenModal, rooms = [], bookings = [], delet
         {/* ── MONTH VIEW ── */}
         {view === 'Month' && (
           <div className="flex-1 min-h-0 bg-white rounded-2xl border border-[#E5E5E5] overflow-hidden flex flex-col">
-            {/* Weekday header */}
+            {/* Weekday header — single letter on mobile, abbreviated on desktop */}
             <div className="grid border-b border-[#EBEBEB] flex-shrink-0" style={{ gridTemplateColumns: monthGridCols }}>
               {WEEKDAYS.map(d => (
                 <div key={d}
-                  className="py-3 text-center text-[10px] font-bold uppercase tracking-widest border-r border-[#EBEBEB] last:border-r-0 text-[#AAAAAA]">
-                  {d}
+                  className="py-2.5 sm:py-3 text-center text-[10px] font-bold uppercase tracking-widest border-r border-[#EBEBEB] last:border-r-0 text-[#AAAAAA]">
+                  <span className="sm:hidden">{d[0]}</span>
+                  <span className="hidden sm:inline">{d}</span>
                 </div>
               ))}
             </div>
             <div className="flex-1 overflow-y-auto scrollbar-hide">
               <div className="grid h-full" style={{ gridTemplateColumns: monthGridCols }}>
                 {getMonthCells(monthNav.year, monthNav.month, workDays).map(({ date, cur }, i) => {
-                  const isToday = date.toDateString() === today.toDateString()
-                  const cellStr = dateToStr(date)
-                  const evs     = visibleEvents.filter(e => e.date === cellStr).slice(0, 3)
+                  const isToday  = date.toDateString() === today.toDateString()
+                  const cellStr  = dateToStr(date)
+                  const allEvs   = visibleEvents.filter(e => e.date === cellStr)
+                  const hasLive  = allEvs.some(e => e.live)
                   return (
                     <div key={i}
                       onClick={() => { setDayDate(date); setView('Day') }}
-                      className={`border-b border-r border-[#F3F3F3] last:border-r-0 p-2 min-h-[90px] cursor-pointer transition-colors
+                      className={`border-b border-r border-[#F3F3F3] last:border-r-0 p-1.5 sm:p-2 min-h-[68px] sm:min-h-[90px] cursor-pointer transition-colors relative
                         ${!cur ? 'bg-[#FAFAFA] hover:bg-[#F5F5F5]' : 'hover:bg-[#FAFAFA]'}`}
                     >
-                      <div className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold mb-1.5
-                        ${isToday ? 'bg-black text-white' : cur ? 'text-black' : 'text-[#CCCCCC]'}`}>
+                      {/* Day number */}
+                      <div className={`w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-full font-bold mb-1 sm:mb-1.5
+                        text-[11px] sm:text-xs
+                        ${isToday ? 'bg-black text-white shadow-sm' : cur ? 'text-black' : 'text-[#CCCCCC]'}`}>
                         {date.getDate()}
                       </div>
-                      <div className="space-y-0.5">
-                        {evs.map((ev, ei) => (
+
+                      {/* Mobile: event dots + count */}
+                      {allEvs.length > 0 && (
+                        <div className="sm:hidden flex items-center gap-0.5 flex-wrap">
+                          {allEvs.slice(0, 3).map((ev, ei) => (
+                            <span key={ei}
+                              className={`w-1.5 h-1.5 rounded-full flex-shrink-0
+                                ${ev.live ? 'bg-black' : 'bg-[#AAAAAA]'}`}
+                            />
+                          ))}
+                          {allEvs.length > 3 && (
+                            <span className="text-[8px] font-bold text-[#AAAAAA] leading-none ml-0.5">
+                              +{allEvs.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Mobile: event count badge when there are events */}
+                      {allEvs.length > 0 && (
+                        <div className={`sm:hidden absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center
+                          text-[8px] font-bold
+                          ${hasLive ? 'bg-black text-white' : 'bg-[#F0F0F0] text-[#666]'}`}>
+                          {allEvs.length}
+                        </div>
+                      )}
+
+                      {/* Desktop: event pills */}
+                      <div className="hidden sm:block space-y-0.5">
+                        {allEvs.slice(0, 3).map((ev, ei) => (
                           <div key={ei}
                             onClick={e => { e.stopPropagation(); setSelectedEvent(ev) }}
                             className={`text-[9px] px-1.5 py-0.5 rounded-md font-semibold truncate cursor-pointer transition-colors
                               ${ev.live ? 'bg-black text-white' : 'bg-[#F0F0F0] text-black hover:bg-[#E5E5E5]'}`}>
+                            {ev.live && <span className="inline-block w-1 h-1 bg-green-400 rounded-full mr-0.5 mb-px" />}
                             {ev.title}
                           </div>
                         ))}
+                        {allEvs.length > 3 && (
+                          <div className="text-[9px] px-1.5 py-0.5 font-semibold text-[#999]">
+                            +{allEvs.length - 3} more
+                          </div>
+                        )}
                       </div>
                     </div>
                   )
