@@ -19,28 +19,57 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
     }
 
-    // Rooms — anyone can read, only admins can write
+    // Rooms — anyone authenticated can read, only admins can write
     match /rooms/{roomId} {
       allow read:  if isAuthenticated();
       allow write: if isAdmin();
     }
 
     // Bookings — anyone authenticated can read and create.
-    // Delete allowed for owner (by email) or admin.
-    // Any authenticated user can also delete (covers auto-cleanup of stale bookings).
+    // Delete: owner (by email) or admin.
+    // Update: owner (by email), admin, or restoring a waiting_for_action
+    //   booking to approved (needed when a client meeting is withdrawn by its owner).
     match /bookings/{bookingId} {
       allow read:   if isAuthenticated();
       allow create: if isAuthenticated();
       allow delete: if isAuthenticated() && (
         resource.data.ownerEmail == request.auth.token.email || isAdmin()
       );
-      allow update: if isAdmin();
+      allow update: if isAuthenticated() && (
+        resource.data.ownerEmail == request.auth.token.email ||
+        isAdmin() ||
+        (resource.data.status == 'waiting_for_action' &&
+         request.resource.data.status == 'approved' &&
+         request.resource.data.priorityRequestId == null)
+      );
     }
 
-    // Settings — publicly readable (companies list needed on signup before auth), admin-only write
+    // Settings — publicly readable (needed before auth for companies list), admin-only write
     match /settings/{settingId} {
       allow read:  if true;
       allow write: if isAdmin();
+    }
+
+    // Notifications — users can read/update their own, any authenticated user can create
+    match /notifications/{notifId} {
+      allow read:   if isAuthenticated() && (
+        resource.data.toEmail == request.auth.token.email || isAdmin()
+      );
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        resource.data.toEmail == request.auth.token.email || isAdmin()
+      );
+      allow delete: if isAuthenticated() && (
+        resource.data.toEmail == request.auth.token.email || isAdmin()
+      );
+    }
+
+    // Meeting History — all authenticated users can read and create; admin can delete
+    match /meetingHistory/{historyId} {
+      allow read:   if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
   }
 }

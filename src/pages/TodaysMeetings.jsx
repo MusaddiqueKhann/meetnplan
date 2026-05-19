@@ -44,6 +44,8 @@ export default function TodaysMeetings({ onOpenModal, bookings = [], deleteBooki
   tomorrowDate.setDate(tomorrowDate.getDate() + 1)
   const tomorrowStr = dateStr(tomorrowDate)
 
+  const isActive = (b) => !b.status || b.status === 'approved' || b.status === 'rescheduled'
+
   const mapBooking = b => ({
     id:          b.id,
     title:       b.title,
@@ -58,7 +60,7 @@ export default function TodaysMeetings({ onOpenModal, bookings = [], deleteBooki
     endM:        b.endMinutes % 60,
   })
 
-  const todayBookings = bookings.filter(b => b.date === todayStr).map(mapBooking)
+  const todayBookings = bookings.filter(b => b.date === todayStr && isActive(b)).map(mapBooking)
 
   const meetings = todayBookings
     .filter(b => b.room === selectedRoom)
@@ -70,7 +72,7 @@ export default function TodaysMeetings({ onOpenModal, bookings = [], deleteBooki
   const pastCount     = meetings.filter(m => m.status === 'past').length
 
   const tomorrowMeetings = bookings
-    .filter(b => b.date === tomorrowStr && b.room === selectedRoom)
+    .filter(b => b.date === tomorrowStr && b.room === selectedRoom && isActive(b))
     .map(mapBooking)
     .sort((a, b) => (a.startH * 60 + a.startM) - (b.startH * 60 + b.startM))
 

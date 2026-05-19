@@ -183,7 +183,10 @@ export default function Calendar({ onOpenModal, rooms = [], bookings = [], delet
     if (view === 'Day'  && dayScrollRef.current)  dayScrollRef.current.scrollTop  = scrollTarget
   }, [view])
 
+  const isActive = (b) => !b.status || b.status === 'approved' || b.status === 'rescheduled'
+
   const bookingEvents = bookings
+    .filter(isActive)
     .map(b => {
       const startH = Math.floor(b.startMinutes / 60)
       const endH   = Math.ceil(b.endMinutes / 60)

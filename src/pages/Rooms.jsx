@@ -33,8 +33,11 @@ export default function Rooms({ onOpenModal, rooms, onAddRoom, onRemoveRoom, boo
   const todayStr   = dateStr(now)
   const nowMinutes = now.getHours() * 60 + now.getMinutes()
 
+  const isActive = (b) => !b.status || b.status === 'approved' || b.status === 'rescheduled'
+
   const getCurrentBooking = (roomName) =>
     bookings.find(b =>
+      isActive(b) &&
       b.room === roomName &&
       b.date === todayStr &&
       nowMinutes >= b.startMinutes &&
@@ -44,6 +47,7 @@ export default function Rooms({ onOpenModal, rooms, onAddRoom, onRemoveRoom, boo
   const getUpNext = (roomName) =>
     bookings
       .filter(b =>
+        isActive(b) &&
         b.room === roomName &&
         (b.date > todayStr || (b.date === todayStr && b.startMinutes > nowMinutes))
       )

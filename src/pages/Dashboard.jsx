@@ -1,4 +1,4 @@
-import { Radio, Clock, BarChart2, CalendarCheck2, Trash2 } from 'lucide-react'
+import { Radio, Clock, BarChart2, CalendarCheck2, Trash2, Bell, Briefcase, AlertCircle, CheckCheck, TrendingUp, Users } from 'lucide-react'
 import Card from '../components/ui/Card'
 
 const ALL_DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -22,9 +22,42 @@ function getWorkWeekDates(workDays) {
   })
 }
 
-export default function Dashboard({ onOpenModal, bookings = [], deleteBooking, rooms = [], onNavigate, user, settings = {} }) {
+function minsToAmPm(m) {
+  const h   = Math.floor(m / 60)
+  const min = m % 60
+  const p   = h >= 12 ? 'PM' : 'AM'
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h
+  return `${h12}:${pad(min)} ${p}`
+}
+
+function timeAgo(ts) {
+  if (!ts?.toMillis) return ''
+  const diff = Date.now() - ts.toMillis()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1)  return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24)  return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
+}
+
+const STATUS_BADGE = {
+  approved:            { label: 'Approved',         cls: 'bg-green-100 text-green-700'  },
+  priority_pending:    { label: 'Priority Pending',  cls: 'bg-amber-100 text-amber-700'  },
+  waiting_for_action:  { label: 'Action Needed',     cls: 'bg-red-100 text-red-600'      },
+  rescheduled:         { label: 'Rescheduled',        cls: 'bg-blue-100 text-blue-700'    },
+  cancelled:           { label: 'Cancelled',          cls: 'bg-neutral-100 text-neutral-500' },
+  pending:             { label: 'Pending',            cls: 'bg-neutral-100 text-neutral-500' },
+}
+
+export default function Dashboard({
+  onOpenModal, bookings = [], deleteBooking, rooms = [], onNavigate, user,
+  settings = {}, notifications = [], meetingHistory = [],
+  markNotificationRead, markAllNotificationsRead,
+}) {
   const canDelete = (b) => user?.role === 'admin' || b.ownerEmail === user?.email
-  const now          = new Date()
+
+  const now        = new Date()
   const todayStr   = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   const nowMinutes = now.getHours() * 60 + now.getMinutes()
 
@@ -32,31 +65,33 @@ export default function Dashboard({ onOpenModal, bookings = [], deleteBooking, r
   tomorrowDate.setDate(now.getDate() + 1)
   const tomorrowStr = `${tomorrowDate.getFullYear()}-${String(tomorrowDate.getMonth() + 1).padStart(2, '0')}-${String(tomorrowDate.getDate()).padStart(2, '0')}`
 
-  const todayBookings = bookings.filter(b => b.date === todayStr)
-  const liveItems     = todayBookings.filter(b => nowMinutes >= b.startMinutes && nowMinutes < b.endMinutes)
-  const upcomingItems = todayBookings.filter(b => b.startMinutes > nowMinutes)
-  const pastItems     = todayBookings.filter(b => b.endMinutes <= nowMinutes)
+  const isActive = (b) => !b.status || b.status === 'approved' || b.status === 'rescheduled'
 
-  const tomorrowBookings = bookings.filter(b => b.date === tomorrowStr)
+  const todayBookings    = bookings.filter(b => b.date === todayStr && isActive(b))
+  const liveItems        = todayBookings.filter(b => nowMinutes >= b.startMinutes && nowMinutes < b.endMinutes)
+  const upcomingItems    = todayBookings.filter(b => b.startMinutes > nowMinutes)
+  const pastItems        = todayBookings.filter(b => b.endMinutes <= nowMinutes)
+  const tomorrowBookings = bookings.filter(b => b.date === tomorrowStr && isActive(b))
+
   const tomorrowTimelineItems = [...tomorrowBookings]
     .sort((a, b) => a.startMinutes - b.startMinutes)
     .map(b => ({ ...b, time: toTimeStr(b.startMinutes), isLive: false, isPast: false }))
 
   const showTomorrow = upcomingItems.length === 0 && liveItems.length === 0 && tomorrowTimelineItems.length > 0
 
-  const avgDuration = bookings.length > 0
-    ? Math.round(bookings.reduce((s, b) => s + (b.endMinutes - b.startMinutes), 0) / bookings.length)
+  const activeBookings = bookings.filter(isActive)
+  const avgDuration    = activeBookings.length > 0
+    ? Math.round(activeBookings.reduce((s, b) => s + (b.endMinutes - b.startMinutes), 0) / activeBookings.length)
     : 0
-
   const activeRoomCount = new Set(todayBookings.map(b => b.room)).size
   const totalRoomCount  = rooms.length || 0
 
-  const offDays    = settings.offDays ?? [5, 6]
-  const workDays   = [0, 1, 2, 3, 4, 5, 6].filter(d => !offDays.includes(d))
-  const weekDates  = getWorkWeekDates(workDays)
-  const barData    = weekDates.map(({ dateStr }) => bookings.filter(b => b.date === dateStr).length)
-  const maxBar     = Math.max(...barData, 1)
-  const todayDow   = now.getDay()
+  const offDays   = settings.offDays ?? [5, 6]
+  const workDays  = [0, 1, 2, 3, 4, 5, 6].filter(d => !offDays.includes(d))
+  const weekDates = getWorkWeekDates(workDays)
+  const barData   = weekDates.map(({ dateStr }) => bookings.filter(b => b.date === dateStr && isActive(b)).length)
+  const maxBar    = Math.max(...barData, 1)
+  const todayDow  = now.getDay()
 
   const timelineItems = [...todayBookings]
     .sort((a, b) => a.startMinutes - b.startMinutes)
@@ -67,8 +102,35 @@ export default function Dashboard({ onOpenModal, bookings = [], deleteBooking, r
       isPast: b.endMinutes <= nowMinutes,
     }))
 
+  // Client meeting analytics
+  const clientMeetings    = bookings.filter(b => b.meetingType === 'client')
+  const priorityPending   = bookings.filter(b => b.status === 'priority_pending')
+  const waitingForAction  = bookings.filter(b => b.status === 'waiting_for_action')
+  const rescheduledCount  = bookings.filter(b => b.status === 'rescheduled').length
+
+  // Company with most client meetings
+  const companyMap = {}
+  clientMeetings.forEach(b => {
+    const co = b.clientName || b.companyName || 'Unknown'
+    companyMap[co] = (companyMap[co] ?? 0) + 1
+  })
+  const topCompany = Object.entries(companyMap).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '—'
+
+  // Peak booking hour
+  const hourMap = {}
+  activeBookings.forEach(b => {
+    const h = Math.floor(b.startMinutes / 60)
+    hourMap[h] = (hourMap[h] ?? 0) + 1
+  })
+  const peakHour = Object.entries(hourMap).sort((a, b) => b[1] - a[1])[0]
+  const peakLabel = peakHour ? minsToAmPm(parseInt(peakHour[0]) * 60) : '—'
+
+  // Unread notifications for current user
+  const unreadNotifs = notifications.filter(n => !n.read)
+  const urgentNotifs = notifications.filter(n => n.type === 'priority_request' && !n.read)
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
 
       {/* Page header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -86,10 +148,56 @@ export default function Dashboard({ onOpenModal, bookings = [], deleteBooking, r
         </button>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {/* Urgent notifications banner */}
+      {urgentNotifs.length > 0 && (
+        <div className="bg-amber-50 border border-amber-300 rounded-2xl px-5 py-4 flex items-start gap-4">
+          <div className="w-9 h-9 bg-amber-500 rounded-xl flex items-center justify-center flex-shrink-0">
+            <AlertCircle size={17} className="text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-bold text-amber-900">Action Required — Client Meeting Priority Request</p>
+            <p className="text-[12px] text-amber-700 mt-0.5">{urgentNotifs[0].message}</p>
+            {urgentNotifs[0].room && (
+              <p className="text-[11px] text-amber-600 mt-1 font-medium">
+                Room: {urgentNotifs[0].room} · {urgentNotifs[0].date} · {minsToAmPm(urgentNotifs[0].startMinutes ?? 0)}–{minsToAmPm(urgentNotifs[0].endMinutes ?? 0)}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={() => onNavigate?.('profile')}
+              className="px-3 py-1.5 bg-amber-500 text-white text-[11px] font-bold rounded-xl hover:bg-amber-600 transition-colors"
+            >
+              View Actions
+            </button>
+            <button
+              onClick={() => markNotificationRead?.(urgentNotifs[0].id)}
+              className="px-3 py-1.5 bg-white border border-amber-300 text-amber-700 text-[11px] font-semibold rounded-xl hover:bg-amber-50 transition-colors"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
-        {/* Today's Meetings */}
+      {/* All notifications panel (if any unread, non-urgent) */}
+      {unreadNotifs.length > 0 && urgentNotifs.length === 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl px-5 py-3.5 flex items-center gap-4">
+          <Bell size={15} className="text-blue-500 flex-shrink-0" />
+          <p className="text-[12px] font-semibold text-blue-800 flex-1">
+            You have {unreadNotifs.length} unread notification{unreadNotifs.length !== 1 ? 's' : ''}.
+          </p>
+          <button
+            onClick={markAllNotificationsRead}
+            className="flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-800 transition-colors"
+          >
+            <CheckCheck size={12} /> Mark all read
+          </button>
+        </div>
+      )}
+
+      {/* KPI Cards — original 4 */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card className="p-5">
           <div className="mb-4">
             <div className="w-9 h-9 bg-[#F9F9F9] border border-[#E5E5E5] rounded-xl flex items-center justify-center">
@@ -98,12 +206,9 @@ export default function Dashboard({ onOpenModal, bookings = [], deleteBooking, r
           </div>
           <p className="text-xs font-semibold text-[#999] uppercase tracking-wide mb-1">Today's Meetings</p>
           <p className="text-2xl font-extrabold text-black tracking-tight mb-2">{todayBookings.length}</p>
-          <p className="text-[11px] font-medium text-[#666]">
-            {upcomingItems.length} upcoming · {pastItems.length} done
-          </p>
+          <p className="text-[11px] font-medium text-[#666]">{upcomingItems.length} upcoming · {pastItems.length} done</p>
         </Card>
 
-        {/* Active Now */}
         <Card className="p-5">
           <div className="flex items-start justify-between mb-4">
             <div className="w-9 h-9 bg-[#F9F9F9] border border-[#E5E5E5] rounded-xl flex items-center justify-center">
@@ -126,7 +231,6 @@ export default function Dashboard({ onOpenModal, bookings = [], deleteBooking, r
           </p>
         </Card>
 
-        {/* Avg Duration */}
         <Card className="p-5">
           <div className="mb-4">
             <div className="w-9 h-9 bg-[#F9F9F9] border border-[#E5E5E5] rounded-xl flex items-center justify-center">
@@ -138,13 +242,10 @@ export default function Dashboard({ onOpenModal, bookings = [], deleteBooking, r
             {avgDuration > 0 ? `${avgDuration} min` : '—'}
           </p>
           <p className="text-[11px] font-medium text-[#666]">
-            {bookings.length > 0
-              ? `across ${bookings.length} booking${bookings.length !== 1 ? 's' : ''}`
-              : 'No bookings yet'}
+            {activeBookings.length > 0 ? `across ${activeBookings.length} booking${activeBookings.length !== 1 ? 's' : ''}` : 'No bookings yet'}
           </p>
         </Card>
 
-        {/* Rooms Used Today */}
         <Card className="p-5">
           <div className="mb-4">
             <div className="w-9 h-9 bg-[#F9F9F9] border border-[#E5E5E5] rounded-xl flex items-center justify-center">
@@ -155,14 +256,31 @@ export default function Dashboard({ onOpenModal, bookings = [], deleteBooking, r
           <p className="text-2xl font-extrabold text-black tracking-tight mb-2">{activeRoomCount}</p>
           {totalRoomCount > 0 && (
             <div className="h-1.5 bg-[#E5E5E5] rounded-full mb-2 overflow-hidden">
-              <div
-                className="h-full bg-black rounded-full transition-all"
-                style={{ width: `${(activeRoomCount / totalRoomCount) * 100}%` }}
-              />
+              <div className="h-full bg-black rounded-full transition-all" style={{ width: `${(activeRoomCount / totalRoomCount) * 100}%` }} />
             </div>
           )}
           <p className="text-[11px] font-medium text-[#666]">of {totalRoomCount} total rooms</p>
         </Card>
+      </div>
+
+      {/* Client Meeting Analytics Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {[
+          { label: 'Client Meetings',    value: clientMeetings.length,   icon: Briefcase,    color: 'text-amber-600', bg: 'bg-amber-50' },
+          { label: 'Priority Pending',   value: priorityPending.length,  icon: AlertCircle,  color: 'text-red-500',   bg: 'bg-red-50'   },
+          { label: 'Action Needed',      value: waitingForAction.length, icon: AlertCircle,  color: 'text-orange-500',bg: 'bg-orange-50' },
+          { label: 'Rescheduled',        value: rescheduledCount,        icon: TrendingUp,   color: 'text-blue-500',  bg: 'bg-blue-50'  },
+          { label: 'Top Client',         value: topCompany,              icon: Users,        color: 'text-purple-600',bg: 'bg-purple-50' },
+          { label: 'Peak Hour',          value: peakLabel,               icon: Clock,        color: 'text-green-600', bg: 'bg-green-50'  },
+        ].map(({ label, value, icon: Icon, color, bg }) => (
+          <Card key={label} className="p-4">
+            <div className={`w-7 h-7 rounded-lg ${bg} flex items-center justify-center mb-3`}>
+              <Icon size={13} className={color} />
+            </div>
+            <p className="text-[10px] font-semibold text-[#999] uppercase tracking-wide mb-1">{label}</p>
+            <p className={`text-lg font-extrabold tracking-tight truncate ${color}`}>{value}</p>
+          </Card>
+        ))}
       </div>
 
       {/* Chart + Daily Pulse */}
@@ -220,50 +338,37 @@ export default function Dashboard({ onOpenModal, bookings = [], deleteBooking, r
             <div className="flex flex-col items-center justify-center py-10 gap-2">
               <CalendarCheck2 size={26} className="text-[#DDD]" />
               <p className="text-xs font-semibold text-[#AAA]">No meetings today</p>
-              <button
-                onClick={onOpenModal}
-                className="mt-1 text-[11px] font-semibold text-black underline underline-offset-2"
-              >
+              <button onClick={onOpenModal} className="mt-1 text-[11px] font-semibold text-black underline underline-offset-2">
                 Schedule one
               </button>
             </div>
           ) : (
             <div className="overflow-y-auto scrollbar-hide" style={{ maxHeight: '340px' }}>
               {(showTomorrow ? tomorrowTimelineItems : timelineItems).map((item, idx, arr) => {
-                const isLast      = idx === arr.length - 1
-                const endTime     = toTimeStr(item.endMinutes)
-                const duration    = item.endMinutes - item.startMinutes
+                const isLast   = idx === arr.length - 1
+                const endTime  = toTimeStr(item.endMinutes)
+                const duration = item.endMinutes - item.startMinutes
                 const durationLbl = duration >= 60
                   ? `${Math.floor(duration / 60)}h${duration % 60 > 0 ? ` ${duration % 60}m` : ''}`
                   : `${duration}m`
                 const person = item.coordinator || item.companyName || null
+                const statusInfo = STATUS_BADGE[item.status]
 
                 return (
                   <div key={item.id} className="flex gap-2.5 group">
-
-                    {/* Time */}
                     <div className="w-10 flex-shrink-0 text-right pt-2.5">
-                      <span className={`text-[10px] font-bold leading-none
-                        ${item.isLive ? 'text-black' : 'text-[#AAAAAA]'}`}>
+                      <span className={`text-[10px] font-bold leading-none ${item.isLive ? 'text-black' : 'text-[#AAAAAA]'}`}>
                         {item.time}
                       </span>
                     </div>
-
-                    {/* Dot + connector line */}
                     <div className="flex flex-col items-center flex-shrink-0" style={{ width: 14 }}>
                       <div className={`w-3 h-3 rounded-full flex-shrink-0 mt-2 z-10
                         ${item.isLive
                           ? 'bg-black ring-2 ring-black ring-offset-2'
-                          : item.isPast
-                            ? 'bg-[#CCCCCC]'
-                            : 'bg-white border-2 border-[#CCCCCC]'}`}
+                          : item.isPast ? 'bg-[#CCCCCC]' : 'bg-white border-2 border-[#CCCCCC]'}`}
                       />
-                      {!isLast && (
-                        <div className="w-px bg-[#E8E8E8] flex-1 mt-1" style={{ minHeight: 24 }} />
-                      )}
+                      {!isLast && <div className="w-px bg-[#E8E8E8] flex-1 mt-1" style={{ minHeight: 24 }} />}
                     </div>
-
-                    {/* Card */}
                     <div
                       onClick={() => onNavigate?.('today')}
                       className={`flex-1 mb-2.5 rounded-xl border transition-all cursor-pointer
@@ -274,21 +379,31 @@ export default function Dashboard({ onOpenModal, bookings = [], deleteBooking, r
                             : 'bg-white border-[#E8E8E8] group-hover:border-[#D4D4D4] group-hover:shadow-sm'}`}
                     >
                       <div className="px-3 py-2.5">
-                        {/* Live badge */}
                         {item.isLive && (
                           <div className="flex items-center gap-1 mb-1.5">
                             <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
                             <span className="text-[9px] font-black uppercase tracking-widest text-green-400">Live Now</span>
                           </div>
                         )}
-
-                        {/* Title row */}
                         <div className="flex items-start justify-between gap-2">
-                          <p className={`text-xs font-bold leading-snug flex-1 min-w-0
-                            ${item.isLive ? 'text-white' : item.isPast ? 'text-[#888]' : 'text-black'}`}>
-                            {item.title}
-                          </p>
-                          {/* Delete button — own bookings only */}
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-xs font-bold leading-snug ${item.isLive ? 'text-white' : item.isPast ? 'text-[#888]' : 'text-black'}`}>
+                              {item.title}
+                            </p>
+                            {/* Status + type badges */}
+                            <div className="flex items-center gap-1 mt-1 flex-wrap">
+                              {item.meetingType === 'client' && (
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full uppercase tracking-wide">
+                                  Client
+                                </span>
+                              )}
+                              {statusInfo && item.status !== 'approved' && (
+                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide ${statusInfo.cls}`}>
+                                  {statusInfo.label}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                           {canDelete(item) && (
                             <button
                               onClick={(e) => { e.stopPropagation(); deleteBooking?.(item.id) }}
@@ -301,24 +416,18 @@ export default function Dashboard({ onOpenModal, bookings = [], deleteBooking, r
                             </button>
                           )}
                         </div>
-
-                        {/* Meta row */}
                         <div className={`flex items-center flex-wrap gap-x-2 gap-y-0 mt-1 text-[10px] font-medium
                           ${item.isLive ? 'text-white/55' : item.isPast ? 'text-[#BBB]' : 'text-[#999]'}`}>
                           <span className={`font-semibold ${item.isLive ? 'text-white/80' : item.isPast ? 'text-[#999]' : 'text-[#555]'}`}>
                             {item.room}
                           </span>
                           {person && <><span>·</span><span>{person}</span></>}
+                          <span>·</span><span>{durationLbl}</span>
                           <span>·</span>
-                          <span>{durationLbl}</span>
-                          <span>·</span>
-                          <span className={item.isLive ? 'text-white/70' : ''}>
-                            {item.time} – {endTime}
-                          </span>
+                          <span className={item.isLive ? 'text-white/70' : ''}>{item.time} – {endTime}</span>
                         </div>
                       </div>
                     </div>
-
                   </div>
                 )
               })}

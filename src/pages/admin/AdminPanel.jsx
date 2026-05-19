@@ -8,6 +8,7 @@ import {
   Users, Building2, CalendarDays, BarChart3, Settings2,
   ShieldCheck, ShieldOff, Trash2, Loader2, Plus, Edit2,
   Check, X, Search, ChevronDown, AlertTriangle, Upload, ImageOff,
+  Briefcase, History, AlertCircle, Filter,
 } from 'lucide-react'
 
 function compressImage(file, maxW = 800, maxH = 600, quality = 0.72) {
@@ -44,11 +45,12 @@ function blobToBase64(blob) {
 }
 
 const TABS = [
-  { id: 'users',     label: 'Users',     icon: Users      },
-  { id: 'rooms',     label: 'Rooms',     icon: Building2  },
-  { id: 'bookings',  label: 'Bookings',  icon: CalendarDays },
-  { id: 'analytics', label: 'Analytics', icon: BarChart3  },
-  { id: 'settings',  label: 'Settings',  icon: Settings2  },
+  { id: 'users',           label: 'Users',          icon: Users      },
+  { id: 'rooms',           label: 'Rooms',          icon: Building2  },
+  { id: 'bookings',        label: 'Bookings',       icon: CalendarDays },
+  { id: 'client_meetings', label: 'Client Meetings', icon: Briefcase  },
+  { id: 'analytics',       label: 'Analytics',      icon: BarChart3  },
+  { id: 'settings',        label: 'Settings',       icon: Settings2  },
 ]
 
 const FEATURES = ['Display', 'Projector', 'Whiteboard', 'VC System', 'WiFi', 'Coffee Station', 'Video Conferencing']
@@ -772,6 +774,373 @@ function AnalyticsTab({ bookings, rooms }) {
   )
 }
 
+// ── Client Meetings Tab ────────────────────────────────────────────────────
+function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove }) {
+  const [filterStatus,  setFilterStatus]  = useState('all')
+  const [filterRoom,    setFilterRoom]    = useState('all')
+  const [filterCompany, setFilterCompany] = useState('all')
+  const [filterDate,    setFilterDate]    = useState('')
+  const [search,        setSearch]        = useState('')
+  const [now,           setNow]           = useState(Date.now())
+  const [overriding,    setOverriding]    = useState({})
+
+  // Refresh "now" every 30 s so countdown labels stay current
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000)
+    return () => clearInterval(id)
+  }, [])
+
+  function pad(n) { return String(n).padStart(2, '0') }
+  function minsToAmPm(m) {
+    const h   = Math.floor(m / 60)
+    const min = m % 60
+    const p   = h >= 12 ? 'PM' : 'AM'
+    const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h
+    return `${h12}:${pad(min)} ${p}`
+  }
+  function fmtDate(str) {
+    if (!str) return ''
+    const d = new Date(str + 'T00:00:00')
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  }
+  function timeAgo(ts) {
+    if (!ts?.toMillis) return ''
+    const diff = Date.now() - ts.toMillis()
+    const mins = Math.floor(diff / 60000)
+    if (mins < 1)  return 'just now'
+    if (mins < 60) return `${mins}m ago`
+    const hrs = Math.floor(mins / 60)
+    if (hrs < 24)  return `${hrs}h ago`
+    return `${Math.floor(hrs / 24)}d ago`
+  }
+
+  const STATUS_CONFIG = {
+    approved:           { label: 'Approved',         cls: 'bg-green-100 text-green-700'       },
+    priority_pending:   { label: 'Priority Pending',  cls: 'bg-amber-100 text-amber-700'       },
+    waiting_for_action: { label: 'Action Needed',     cls: 'bg-red-100 text-red-600'           },
+    rescheduled:        { label: 'Rescheduled',        cls: 'bg-blue-100 text-blue-700'         },
+    cancelled:          { label: 'Cancelled',          cls: 'bg-neutral-100 text-neutral-500'  },
+  }
+
+  const HISTORY_ACTIONS = {
+    created:                { label: 'Created',          cls: 'bg-green-100 text-green-700'   },
+    priority_created:       { label: 'Priority Created', cls: 'bg-amber-100 text-amber-700'   },
+    approved:               { label: 'Approved',         cls: 'bg-green-100 text-green-700'   },
+    deleted_with_reason:    { label: 'Deleted',          cls: 'bg-red-100 text-red-600'       },
+    rescheduled:            { label: 'Rescheduled',      cls: 'bg-blue-100 text-blue-700'     },
+    admin_override_deleted: { label: 'Admin Override',   cls: 'bg-red-900/10 text-red-800'    },
+  }
+
+  const allRooms     = [...new Set(bookings.map(b => b.room))].filter(Boolean).sort()
+  const allCompanies = [...new Set(bookings.map(b => b.clientName || b.companyName))].filter(Boolean).sort()
+
+  const clientMeetings = bookings
+    .filter(b => b.meetingType === 'client')
+    .filter(b => filterStatus  === 'all' || b.status === filterStatus)
+    .filter(b => filterRoom    === 'all' || b.room === filterRoom)
+    .filter(b => filterCompany === 'all' || (b.clientName || b.companyName) === filterCompany)
+    .filter(b => !filterDate   || b.date === filterDate)
+    .filter(b => !search       ||
+      b.title?.toLowerCase().includes(search.toLowerCase()) ||
+      b.ownerEmail?.toLowerCase().includes(search.toLowerCase()) ||
+      b.coordinator?.toLowerCase().includes(search.toLowerCase()) ||
+      b.clientName?.toLowerCase().includes(search.toLowerCase())
+    )
+    .sort((a, b) => a.date !== b.date ? b.date.localeCompare(a.date) : b.startMinutes - a.startMinutes)
+
+  // KPIs
+  const total         = bookings.filter(b => b.meetingType === 'client').length
+  const pending       = bookings.filter(b => b.meetingType === 'client' && b.status === 'priority_pending').length
+  const approved      = bookings.filter(b => b.meetingType === 'client' && b.status === 'approved').length
+  const rescheduled   = bookings.filter(b => b.meetingType === 'client' && b.status === 'rescheduled').length
+  const waitingAction = bookings.filter(b => b.status === 'waiting_for_action').length
+
+  // Client meeting history
+  const clientHistory = meetingHistory
+    .filter(h => h.meetingType === 'client' || h.action === 'priority_created' || h.action === 'approved')
+    .slice(0, 40)
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div>
+        <h2 className="text-lg font-bold text-black">Client Meetings</h2>
+        <p className="text-sm text-neutral-400 mt-0.5">Priority management and approval tracking</p>
+      </div>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        {[
+          { label: 'Total Client',     value: total,         cls: 'text-amber-600'  },
+          { label: 'Approved',         value: approved,      cls: 'text-green-600'  },
+          { label: 'Priority Pending', value: pending,       cls: 'text-amber-600'  },
+          { label: 'Action Needed',    value: waitingAction, cls: 'text-red-500'    },
+          { label: 'Rescheduled',      value: rescheduled,   cls: 'text-blue-600'   },
+        ].map(({ label, value, cls }) => (
+          <div key={label} className="bg-white border border-neutral-200 rounded-2xl p-4">
+            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">{label}</p>
+            <p className={`text-2xl font-black mt-1 ${cls}`}>{value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <div className="relative">
+          <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+          <input type="text" placeholder="Search meetings..." value={search} onChange={e => setSearch(e.target.value)}
+            className="pl-8 pr-3 py-2 bg-white border border-neutral-200 rounded-xl text-xs text-black placeholder-neutral-300 outline-none focus:border-black transition-colors w-44" />
+        </div>
+
+        {[
+          { value: filterStatus,  onChange: setFilterStatus,  opts: [
+            { v: 'all', l: 'All Statuses' },
+            { v: 'approved',           l: 'Approved'         },
+            { v: 'priority_pending',   l: 'Priority Pending'  },
+            { v: 'waiting_for_action', l: 'Action Needed'     },
+            { v: 'rescheduled',        l: 'Rescheduled'       },
+            { v: 'cancelled',          l: 'Cancelled'         },
+          ]},
+          { value: filterRoom, onChange: setFilterRoom, opts: [{ v: 'all', l: 'All Rooms' }, ...allRooms.map(r => ({ v: r, l: r }))] },
+          { value: filterCompany, onChange: setFilterCompany, opts: [{ v: 'all', l: 'All Clients' }, ...allCompanies.map(c => ({ v: c, l: c }))] },
+        ].map(({ value, onChange, opts }, i) => (
+          <select key={i} value={value} onChange={e => onChange(e.target.value)}
+            className="px-3 py-2 bg-white border border-neutral-200 rounded-xl text-xs text-black focus:outline-none focus:border-black transition-colors cursor-pointer">
+            {opts.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+          </select>
+        ))}
+
+        <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
+          className="px-3 py-2 bg-white border border-neutral-200 rounded-xl text-xs text-black focus:outline-none focus:border-black transition-colors" />
+        {(filterStatus !== 'all' || filterRoom !== 'all' || filterCompany !== 'all' || filterDate || search) && (
+          <button onClick={() => { setFilterStatus('all'); setFilterRoom('all'); setFilterCompany('all'); setFilterDate(''); setSearch('') }}
+            className="px-3 py-2 text-xs font-semibold text-neutral-500 hover:text-black transition-colors border border-neutral-200 rounded-xl bg-white">
+            Clear filters
+          </button>
+        )}
+      </div>
+
+      {/* Meetings Table */}
+      {clientMeetings.length === 0 ? (
+        <div className="bg-white border border-neutral-200 rounded-2xl px-5 py-14 flex flex-col items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center">
+            <Briefcase size={20} className="text-neutral-300" />
+          </div>
+          <p className="text-[13px] font-semibold text-neutral-400">No client meetings found</p>
+          <p className="text-[11px] text-neutral-300">Try adjusting your filters</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-2xl">
+        <div className="flex flex-col gap-2 min-w-[680px]">
+          {/* Column header */}
+          <div className="grid grid-cols-[1fr_160px_180px_130px] px-4 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.1em]">
+            <span className="pl-3">Meeting</span>
+            <span>Client</span>
+            <span>Room &amp; Schedule</span>
+            <span>Status</span>
+          </div>
+
+          {clientMeetings.map(b => {
+            const statusInfo = STATUS_CONFIG[b.status]
+
+            const accentMap = {
+              priority_pending:   'border-l-amber-400   bg-amber-50/30',
+              waiting_for_action: 'border-l-red-400     bg-red-50/20',
+              approved:           'border-l-green-400   bg-white',
+              rescheduled:        'border-l-blue-400    bg-blue-50/20',
+              cancelled:          'border-l-neutral-300 bg-neutral-50/60',
+            }
+            const dotMap = {
+              priority_pending:   'bg-amber-400',
+              waiting_for_action: 'bg-red-400',
+              approved:           'bg-green-400',
+              rescheduled:        'bg-blue-400',
+              cancelled:          'bg-neutral-300',
+            }
+            const accent = accentMap[b.status] ?? 'border-l-neutral-200 bg-white'
+            const dot    = dotMap[b.status]    ?? 'bg-neutral-300'
+
+            // --- Admin override logic (supports multiple conflicts) ---
+            const conflictIds = b.status === 'priority_pending'
+              ? (b.conflictsWithIds ?? (b.conflictsWithId ? [b.conflictsWithId] : []))
+              : []
+            const conflictingBookings = conflictIds
+              .map(id => bookings.find(x => x.id === id))
+              .filter(x => x?.status === 'waiting_for_action')
+
+            return (
+              <div key={b.id} className="flex flex-col gap-0">
+                {/* Main row */}
+                <div
+                  className={`grid grid-cols-[1fr_160px_180px_130px] items-center gap-2 px-4 py-3.5 border border-neutral-200 border-l-[3px] hover:shadow-sm transition-all ${accent} ${conflictingBookings.length > 0 ? 'rounded-t-2xl rounded-b-none border-b-0' : 'rounded-2xl'}`}
+                >
+                  {/* Meeting info */}
+                  <div className="flex items-center gap-3 min-w-0 pr-2">
+                    <div className="w-8 h-8 rounded-xl bg-neutral-900 flex items-center justify-center flex-shrink-0">
+                      <span className="text-[11px] font-bold text-white">
+                        {(b.title || 'M').charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-bold text-black truncate leading-tight">{b.title}</p>
+                      <p className="text-[11px] text-neutral-400 truncate mt-0.5">{b.coordinator} · {b.companyName}</p>
+                      <p className="text-[10px] text-neutral-300 truncate mt-0.5">{b.ownerEmail}</p>
+                    </div>
+                  </div>
+
+                  {/* Client name */}
+                  <div>
+                    {b.clientName ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-100 border border-amber-200 rounded-xl">
+                        <Building2 size={10} className="text-amber-600 flex-shrink-0" />
+                        <span className="text-[12px] font-bold text-amber-800 truncate max-w-[100px]">{b.clientName}</span>
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-neutral-300">—</span>
+                    )}
+                  </div>
+
+                  {/* Room & schedule */}
+                  <div className="flex flex-col gap-0.5">
+                    <p className="text-[12px] font-semibold text-black truncate">{b.room}</p>
+                    <p className="text-[11px] text-neutral-500">{fmtDate(b.date)}</p>
+                    <p className="text-[11px] font-medium text-neutral-600">
+                      {minsToAmPm(b.startMinutes)} – {minsToAmPm(b.endMinutes)}
+                    </p>
+                  </div>
+
+                  {/* Status badge */}
+                  <div>
+                    {statusInfo ? (
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold ${statusInfo.cls}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dot}`} />
+                        {statusInfo.label}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-neutral-400">{b.status ?? '—'}</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* ── Override sub-panels (one per conflicting booking) ── */}
+                {conflictingBookings.map((cb, cbIdx) => {
+                  const overrideKey   = `${b.id}_${cb.id}`
+                  const waitedMs      = b.createdAt?.toMillis ? now - b.createdAt.toMillis() : 0
+                  const minsWaited    = Math.floor(waitedMs / 60_000)
+                  const minsRemaining = Math.max(0, 5 - minsWaited)
+                  const canOverride   = waitedMs >= 5 * 60_000
+                  const isLast        = cbIdx === conflictingBookings.length - 1
+                  return (
+                    <div key={cb.id} className={`border border-neutral-200 border-l-[3px] px-4 py-3 flex items-center gap-4 ${isLast ? 'rounded-b-2xl' : ''} ${
+                      canOverride
+                        ? 'bg-red-50 border-l-red-500 border-t-red-100'
+                        : 'bg-neutral-50 border-l-neutral-300 border-t-neutral-100'
+                    }`}>
+                      {/* Left: conflicting meeting info */}
+                      <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                        <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 animate-pulse ${canOverride ? 'bg-red-500' : 'bg-amber-400'}`} />
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-bold text-neutral-700 truncate">
+                            Clashing with: &ldquo;{cb.title}&rdquo;
+                          </p>
+                          <p className="text-[10px] text-neutral-500 truncate">
+                            Owner: {cb.ownerEmail} · Waiting {minsWaited}m
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Right: countdown or override button */}
+                      {canOverride ? (
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          <div className="flex flex-col items-end">
+                            <p className="text-[11px] font-bold text-red-700">No action for {minsWaited} min</p>
+                            <p className="text-[10px] text-red-500">Owner has not responded</p>
+                          </div>
+                          <button
+                            disabled={!!overriding[overrideKey]}
+                            onClick={async () => {
+                              setOverriding(o => ({ ...o, [overrideKey]: true }))
+                              try {
+                                await adminOverrideApprove?.(cb, b)
+                              } finally {
+                                setOverriding(o => ({ ...o, [overrideKey]: false }))
+                              }
+                            }}
+                            className="flex items-center gap-1.5 px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white text-[12px] font-bold rounded-xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
+                          >
+                            {overriding[overrideKey]
+                              ? <Loader2 size={12} className="animate-spin" />
+                              : <Trash2 size={12} />
+                            }
+                            Admin Override
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <div className="flex flex-col items-end">
+                            <p className="text-[11px] font-semibold text-neutral-600">Override in {minsRemaining} min</p>
+                            <p className="text-[10px] text-neutral-400">Waiting for owner action</p>
+                          </div>
+                          <div className="w-20 h-1.5 bg-neutral-200 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-amber-400 rounded-full transition-all"
+                              style={{ width: `${Math.min(100, (minsWaited / 5) * 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })}
+        </div>
+        </div>
+      )}
+
+      {/* Approval History */}
+      {clientHistory.length > 0 && (
+        <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-neutral-100 flex items-center gap-2">
+            <History size={14} className="text-neutral-400" />
+            <p className="text-[12px] font-bold text-black">Approval History</p>
+            <span className="ml-auto text-[11px] font-semibold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">{clientHistory.length}</span>
+          </div>
+          <div className="divide-y divide-neutral-100 max-h-80 overflow-y-auto">
+            {clientHistory.map(h => {
+              const actionInfo = HISTORY_ACTIONS[h.action]
+              return (
+                <div key={h.id} className="px-5 py-3 flex items-start gap-4 hover:bg-neutral-50 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide ${actionInfo?.cls ?? 'bg-neutral-100 text-neutral-400'}`}>
+                        {actionInfo?.label ?? h.action}
+                      </span>
+                      <span className="text-[12px] font-semibold text-black truncate">{h.bookingTitle}</span>
+                    </div>
+                    <p className="text-[11px] text-neutral-400">
+                      {h.room} · {fmtDate(h.date)}
+                      {h.clientName && <span className="text-amber-600 font-medium"> · Client: {h.clientName}</span>}
+                    </p>
+                    <p className="text-[11px] text-neutral-400">by {h.performedBy} ({h.performedByEmail})</p>
+                    {h.reason && <p className="text-[11px] text-neutral-500 italic mt-0.5">Reason: {h.reason}</p>}
+                    {h.newDate && (
+                      <p className="text-[11px] text-blue-600 mt-0.5">
+                        Rescheduled → {h.newRoom ?? h.room} · {fmtDate(h.newDate)}
+                      </p>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-neutral-400 flex-shrink-0">{timeAgo(h.createdAt)}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Settings Tab ───────────────────────────────────────────────────────────
 function SettingsTab() {
   const [config, setConfig] = useState({
@@ -1074,7 +1443,7 @@ function SettingsTab() {
 }
 
 // ── Admin Panel Root ───────────────────────────────────────────────────────
-export default function AdminPanel({ rooms, bookings, onAddRoom, onRemoveRoom, onUpdateRoom, deleteBooking, user }) {
+export default function AdminPanel({ rooms, bookings, onAddRoom, onRemoveRoom, onUpdateRoom, deleteBooking, user, meetingHistory = [], adminOverrideApprove }) {
   const [activeTab, setActiveTab] = useState('users')
 
   return (
@@ -1110,11 +1479,12 @@ export default function AdminPanel({ rooms, bookings, onAddRoom, onRemoveRoom, o
       </div>
 
       {/* Tab content */}
-      {activeTab === 'users'     && <UsersTab     currentUser={user} bookings={bookings} deleteBooking={deleteBooking} />}
-      {activeTab === 'rooms'     && <RoomsTab     rooms={rooms} bookings={bookings} onAddRoom={onAddRoom} onRemoveRoom={onRemoveRoom} onUpdateRoom={onUpdateRoom} />}
-      {activeTab === 'bookings'  && <BookingsTab  bookings={bookings} rooms={rooms} deleteBooking={deleteBooking} />}
-      {activeTab === 'analytics' && <AnalyticsTab bookings={bookings} rooms={rooms} />}
-      {activeTab === 'settings'  && <SettingsTab />}
+      {activeTab === 'users'           && <UsersTab          currentUser={user} bookings={bookings} deleteBooking={deleteBooking} />}
+      {activeTab === 'rooms'           && <RoomsTab          rooms={rooms} bookings={bookings} onAddRoom={onAddRoom} onRemoveRoom={onRemoveRoom} onUpdateRoom={onUpdateRoom} />}
+      {activeTab === 'bookings'        && <BookingsTab       bookings={bookings} rooms={rooms} deleteBooking={deleteBooking} />}
+      {activeTab === 'client_meetings' && <ClientMeetingsTab bookings={bookings} meetingHistory={meetingHistory} adminOverrideApprove={adminOverrideApprove} />}
+      {activeTab === 'analytics'       && <AnalyticsTab      bookings={bookings} rooms={rooms} />}
+      {activeTab === 'settings'        && <SettingsTab />}
     </div>
   )
 }
