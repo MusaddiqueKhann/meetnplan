@@ -196,7 +196,7 @@ export default function App() {
           fromName:             bookingData.coordinator,
           fromCompany:          bookingData.companyName,
           type:                 'priority_request',
-          message:              'You received an important client meeting request affecting your booked slot.',
+          message:              `Your meeting "${conflict.title}" conflicts with the high-priority client meeting "${bookingData.title}". Please reschedule or cancel your meeting to accommodate this booking.`,
           bookingId:            conflict.id,
           relatedBookingId:     newId,
           clientName:           bookingData.clientName ?? '',
@@ -206,6 +206,7 @@ export default function App() {
           date:                 bookingData.date,
           startMinutes:         bookingData.startMinutes,
           endMinutes:           bookingData.endMinutes,
+          totalConflicts:       conflicts.length,
         })
       }
 
