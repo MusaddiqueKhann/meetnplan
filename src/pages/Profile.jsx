@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   ArrowLeft, Eye, EyeOff, Loader2, Trash2, Lock,
   CalendarDays, Building2, Mail, User, AlertTriangle, CheckCircle2,
   Bell, Clock, ChevronDown, RotateCcw, History, CheckCheck,
-  AlertCircle, Briefcase, DoorOpen, X,
+  AlertCircle, Briefcase, DoorOpen, X, Users,
 } from 'lucide-react'
+import DatePicker from '../components/ui/DatePicker'
+import TimePicker from '../components/ui/TimePicker'
 import {
   updatePassword,
   reauthenticateWithCredential,
@@ -102,29 +104,39 @@ function RescheduleInline({ booking, bookings, rooms, settings, onReschedule, on
   const [roomOpen, setRoomOpen] = useState(false)
   const [error,    setError]    = useState('')
   const [saving,   setSaving]   = useState(false)
+  const roomRef = useRef(null)
 
-  function maxDate() {
+  useEffect(() => {
+    const h = (e) => { if (roomRef.current && !roomRef.current.contains(e.target)) setRoomOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  function maxDateStr() {
     const d = new Date()
     d.setDate(d.getDate() + maxDaysAhead)
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   }
 
+  const now              = new Date()
+  const isSelectedToday  = date === todayStr()
+  const effectiveMinHour = isSelectedToday ? Math.max(workStartHour, now.getHours()) : workStartHour
+  const dur              = booking.endMinutes - booking.startMinutes
+  const durLabel         = `${Math.floor(dur / 60) > 0 ? `${Math.floor(dur / 60)}h ` : ''}${dur % 60 > 0 ? `${dur % 60}m` : ''}`.trim()
+
   function validate() {
     if (!date || !time || !room) return 'Please fill in all fields.'
     const startMins = toMinutes(time)
-    const dur       = booking.endMinutes - booking.startMinutes
     const endMins   = startMins + dur
     const d         = new Date(date + 'T00:00:00')
     if (offDays.includes(d.getDay())) return 'That day is not a working day.'
     if (startMins < workStartHour * 60) return `Must start after ${workStartHour}:00.`
     if (endMins > workEndHour * 60)     return `Must end before ${workEndHour}:00.`
-    if (date === todayStr() && startMins <= new Date().getHours() * 60 + new Date().getMinutes())
+    if (isSelectedToday && startMins <= now.getHours() * 60 + now.getMinutes())
       return 'Please choose a future time.'
     const conflict = bookings.find(b =>
-      b.id !== booking.id &&
-      b.room === room && b.date === date &&
-      b.status !== 'cancelled' &&
-      startMins < b.endMinutes && endMins > b.startMinutes
+      b.id !== booking.id && b.room === room && b.date === date &&
+      b.status !== 'cancelled' && startMins < b.endMinutes && endMins > b.startMinutes
     )
     if (conflict) return `${room} is already booked at that time.`
     return null
@@ -137,84 +149,116 @@ function RescheduleInline({ booking, bookings, rooms, settings, onReschedule, on
     setSaving(true)
     try {
       const startMinutes = toMinutes(time)
-      const dur          = booking.endMinutes - booking.startMinutes
       await onReschedule(booking, { date, room, startMinutes, endMinutes: startMinutes + dur })
     } finally {
       setSaving(false)
     }
   }
 
-  const selectCls = inputCls + ' cursor-pointer'
+  const fieldCls = 'w-full px-4 py-3 bg-[#F9F9F9] border border-[#E5E5E5] rounded-2xl text-sm text-black outline-none focus:border-black focus:bg-white transition-colors cursor-pointer flex items-center justify-between'
+  const labelCls = 'flex items-center gap-1.5 text-[11px] font-bold text-black uppercase tracking-wide'
 
   return (
-    <form onSubmit={handleSubmit} className="mt-3 bg-blue-50 border border-blue-200 rounded-xl p-4 flex flex-col gap-3">
-      <p className="text-[12px] font-bold text-blue-800">Reschedule this meeting</p>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="flex flex-col gap-1">
-          <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide">New Date</label>
-          <input
-            type="date"
-            value={date}
-            min={todayStr()}
-            max={maxDate()}
-            onChange={e => { setDate(e.target.value); setError('') }}
-            className={inputCls}
-            required
-          />
+    <form onSubmit={handleSubmit} className="mt-3 bg-white border border-[#E5E5E5] rounded-2xl overflow-hidden shadow-sm">
+      {/* Header */}
+      <div className="px-4 sm:px-5 py-3 border-b border-[#F0F0F0] bg-[#FAFAFA] flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <RotateCcw size={13} className="text-black" />
+          <p className="text-[13px] font-bold text-black">Reschedule Meeting</p>
         </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide">New Time</label>
-          <input
-            type="time"
-            value={time}
-            min={`${pad(workStartHour)}:00`}
-            max={`${pad(workEndHour - 1)}:00`}
-            onChange={e => { setTime(e.target.value); setError('') }}
-            className={inputCls}
-            required
-          />
+        <span className="text-[11px] text-neutral-400 font-medium bg-neutral-100 px-2 py-0.5 rounded-full">{durLabel} duration</span>
+      </div>
+
+      <div className="p-4 sm:p-5 flex flex-col gap-4">
+        {/* Date + Time */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="flex flex-col gap-1.5">
+            <label className={labelCls}><CalendarDays size={11} /> New Date</label>
+            <DatePicker
+              value={date}
+              onChange={e => { setDate(e.target.value); setError('') }}
+              required
+              minDate={todayStr()}
+              maxDate={maxDateStr()}
+              offDays={offDays}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className={labelCls}><Clock size={11} /> New Time</label>
+            <TimePicker
+              value={time}
+              onChange={e => { setTime(e.target.value); setError('') }}
+              required
+              minHour={effectiveMinHour}
+              maxHour={workEndHour}
+            />
+          </div>
         </div>
-        <div className="flex flex-col gap-1 relative">
-          <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide">Room</label>
+
+        {/* Room */}
+        <div className="flex flex-col gap-1.5" ref={roomRef}>
+          <label className={labelCls}><DoorOpen size={11} /> Room</label>
           <div className="relative">
             <button
               type="button"
               onClick={() => setRoomOpen(v => !v)}
-              className={`${selectCls} flex items-center justify-between text-sm ${!room ? 'text-neutral-300' : 'text-black'}`}
+              className={`${fieldCls} ${!room ? 'text-[#999]' : 'text-black'}`}
             >
-              <span>{room || 'Select room'}</span>
-              <ChevronDown size={13} className={`text-neutral-400 transition-transform ${roomOpen ? 'rotate-180' : ''}`} />
+              <span className="text-sm font-medium">
+                {room
+                  ? `${room} · ${rooms.find(r => r.name === room)?.capacity ?? ''} seats`
+                  : 'Select room'}
+              </span>
+              <ChevronDown size={14} className={`flex-shrink-0 text-[#999] transition-transform duration-150 ${roomOpen ? 'rotate-180' : ''}`} />
             </button>
+            <input type="text" required readOnly value={room} onChange={() => {}} className="sr-only" tabIndex={-1} />
             {roomOpen && (
-              <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-neutral-200 rounded-xl shadow-lg z-20 overflow-hidden">
+              <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-[#E5E5E5] rounded-2xl shadow-lg z-[200] overflow-hidden">
                 {rooms.map(r => (
                   <button
                     key={r.id}
                     type="button"
                     onClick={() => { setRoom(r.name); setRoomOpen(false); setError('') }}
-                    className={`w-full px-4 py-2.5 text-left text-[13px] font-medium hover:bg-neutral-50 transition-colors ${room === r.name ? 'bg-neutral-100 font-semibold' : ''}`}
+                    className={`w-full flex items-center justify-between px-4 py-3 text-left hover:bg-[#F9F9F9] transition-colors ${room === r.name ? 'bg-[#F5F5F5]' : ''}`}
                   >
-                    {r.name} · {r.capacity} seats
+                    <span className={`text-[13px] font-semibold ${room === r.name ? 'text-black' : 'text-[#333]'}`}>{r.name}</span>
+                    <span className="flex items-center gap-1 text-[11px] text-[#999] font-medium">
+                      <Users size={11} /> {r.capacity} seats
+                    </span>
                   </button>
                 ))}
               </div>
             )}
           </div>
         </div>
-      </div>
-      {error && <p className="text-[11px] text-red-600 font-medium">{error}</p>}
-      <div className="flex items-center gap-2">
-        <button
-          type="submit"
-          disabled={saving}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-[12px] font-bold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-60"
-        >
-          {saving ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
-          Confirm Reschedule
-        </button>
-        <button type="button" onClick={onCancel} className="px-4 py-2 text-[12px] font-semibold text-neutral-500 hover:text-black transition-colors">
-          Cancel
-        </button>
+
+        {/* Error */}
+        {error && (
+          <div className="flex items-center gap-2 px-3 py-2.5 bg-red-50 border border-red-200 rounded-xl">
+            <AlertCircle size={12} className="text-red-500 flex-shrink-0" />
+            <p className="text-[11px] text-red-600 font-semibold">{error}</p>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex items-center gap-2 pt-1">
+          <button
+            type="submit"
+            disabled={saving}
+            className="flex items-center gap-2 px-5 py-2.5 bg-black text-white text-[13px] font-semibold rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-60"
+          >
+            {saving ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}
+            Confirm Reschedule
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={saving}
+            className="px-4 py-2.5 text-[13px] font-semibold text-neutral-500 hover:text-black transition-colors disabled:opacity-40"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
     </form>
   )
