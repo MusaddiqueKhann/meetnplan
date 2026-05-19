@@ -143,7 +143,8 @@ function UsersTab({ currentUser, bookings, deleteBooking }) {
       </div>
 
       <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
-        <div className="grid grid-cols-[1fr_160px_100px_80px] text-[10px] font-bold text-neutral-400 uppercase tracking-wider px-5 py-3 border-b border-neutral-100 bg-neutral-50">
+        <div className="overflow-x-auto">
+        <div className="grid grid-cols-[1fr_160px_100px_80px] min-w-[480px] text-[10px] font-bold text-neutral-400 uppercase tracking-wider px-5 py-3 border-b border-neutral-100 bg-neutral-50">
           <span>User</span>
           <span>Company</span>
           <span>Role</span>
@@ -156,7 +157,7 @@ function UsersTab({ currentUser, bookings, deleteBooking }) {
           const isSelf = u.id === currentUser.uid
           const bookingCount = bookings.filter(b => b.ownerEmail === u.email).length
           return (
-            <div key={u.id} className="grid grid-cols-[1fr_160px_100px_80px] items-center px-5 py-3.5 border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition-colors">
+            <div key={u.id} className="grid grid-cols-[1fr_160px_100px_80px] min-w-[480px] items-center px-5 py-3.5 border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition-colors">
               <div className="min-w-0 pr-4">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-full bg-black flex items-center justify-center flex-shrink-0">
@@ -205,6 +206,7 @@ function UsersTab({ currentUser, bookings, deleteBooking }) {
             </div>
           )
         })}
+        </div>
       </div>
 
       {/* Delete confirm modal */}
@@ -613,7 +615,8 @@ function BookingsTab({ bookings, rooms, deleteBooking }) {
       </div>
 
       <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
-        <div className="grid grid-cols-[1fr_140px_160px_48px] text-[10px] font-bold text-neutral-400 uppercase tracking-wider px-5 py-3 border-b border-neutral-100 bg-neutral-50">
+        <div className="overflow-x-auto">
+        <div className="grid grid-cols-[1fr_140px_160px_48px] min-w-[500px] text-[10px] font-bold text-neutral-400 uppercase tracking-wider px-5 py-3 border-b border-neutral-100 bg-neutral-50">
           <span>Meeting</span>
           <span>Room</span>
           <span>Date & Time</span>
@@ -623,7 +626,7 @@ function BookingsTab({ bookings, rooms, deleteBooking }) {
           <div className="px-5 py-10 text-center text-sm text-neutral-400">No bookings found</div>
         )}
         {filtered.map(b => (
-          <div key={b.id} className="grid grid-cols-[1fr_140px_160px_48px] items-center px-5 py-3.5 border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition-colors">
+          <div key={b.id} className="grid grid-cols-[1fr_140px_160px_48px] min-w-[500px] items-center px-5 py-3.5 border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition-colors">
             <div className="min-w-0 pr-4">
               <p className="text-[13px] font-semibold text-black truncate">{b.title || b.meetingName}</p>
               <p className="text-[11px] text-neutral-400 truncate">{b.ownerEmail} · {b.companyName || b.coordinator || '—'}</p>
@@ -643,6 +646,7 @@ function BookingsTab({ bookings, rooms, deleteBooking }) {
             </div>
           </div>
         ))}
+        </div>
       </div>
     </div>
   )
@@ -709,7 +713,7 @@ function AnalyticsTab({ bookings, rooms }) {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Bookings by Room */}
         <div className="bg-white border border-neutral-200 rounded-2xl p-5">
           <p className="text-[12px] font-bold text-black mb-4">Bookings by Room</p>

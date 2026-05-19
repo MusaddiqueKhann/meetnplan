@@ -40,7 +40,7 @@ export default function Sidebar({ currentPage, onNavigate, onOpenModal, rooms = 
   const isCalendar = currentPage === 'calendar'
 
   return (
-    <aside className={`w-[260px] min-h-screen bg-white border-r border-[#EBEBEB] flex flex-col fixed left-0 top-0 z-50 transition-transform duration-300 ease-in-out
+    <aside className={`w-[260px] bg-white border-r border-[#EBEBEB] flex flex-col fixed left-0 top-0 bottom-0 z-50 overflow-y-auto transition-transform duration-300 ease-in-out
       ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
 
       {/* Logo */}

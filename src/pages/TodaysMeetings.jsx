@@ -86,23 +86,30 @@ export default function TodaysMeetings({ onOpenModal, bookings = [], deleteBooki
     <div className="flex flex-col flex-1 min-h-0">
 
       {/* Page header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4 sm:mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-black tracking-tight">Today's Meetings</h1>
-          <p className="text-sm text-[#999] mt-0.5 flex items-center gap-1.5">
-            <CalendarClock size={12} />
-            {dateLabel}
-            <span className="text-[#D4D4D4]">·</span>
-            <Clock size={11} />
-            <span className="font-semibold text-[#777]">
-              {toAmPm(now.getHours(), now.getMinutes())}
-            </span>
-          </p>
+      <div className="flex flex-col gap-2.5 mb-4 sm:mb-5">
+
+        {/* Row 1: Title + Schedule button */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-black tracking-tight leading-tight">Today's Meetings</h1>
+            <p className="text-xs sm:text-sm text-[#999] mt-0.5 flex items-center flex-wrap gap-x-1.5 gap-y-0 leading-snug">
+              <CalendarClock size={11} className="flex-shrink-0" />
+              <span className="truncate">{dateLabel}</span>
+              <span className="text-[#D4D4D4] flex-shrink-0">·</span>
+              <Clock size={11} className="flex-shrink-0" />
+              <span className="font-semibold text-[#777] flex-shrink-0">{toAmPm(now.getHours(), now.getMinutes())}</span>
+            </p>
+          </div>
+          <button
+            onClick={onOpenModal}
+            className="flex-shrink-0 px-4 py-2 bg-black text-white text-sm font-medium rounded-xl hover:bg-neutral-800 transition-colors duration-150"
+          >
+            + Schedule
+          </button>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-
-          {/* Stats badges */}
+        {/* Row 2: Stats badges + Room selector */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="px-3 py-1.5 bg-[#F9F9F9] border border-[#E5E5E5] rounded-xl text-xs font-medium text-[#666]">
               <span className="text-black font-bold">{meetings.length}</span> Total
@@ -121,31 +128,21 @@ export default function TodaysMeetings({ onOpenModal, bookings = [], deleteBooki
             </span>
           </div>
 
-          {/* Room selector + Schedule button */}
-          <div className="flex items-center gap-2 sm:ml-auto">
-            <div className="relative flex-1 sm:flex-none">
-              <select
-                value={selectedRoom}
-                onChange={e => setSelectedRoom(e.target.value)}
-                className="appearance-none w-full sm:w-auto pl-3 pr-8 py-2.5 sm:py-2 bg-[#F9F9F9] border border-[#E5E5E5] rounded-xl text-sm sm:text-xs font-semibold text-black outline-none focus:border-black focus:bg-white transition-colors cursor-pointer"
-              >
-                <option value="" disabled>Select room</option>
-                {rooms.map(r => (
-                  <option key={r.id} value={r.name}>{r.name}</option>
-                ))}
-              </select>
-              <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#999] pointer-events-none" />
-            </div>
-
-            <button
-              onClick={onOpenModal}
-              className="flex-shrink-0 px-4 py-2.5 sm:py-2 bg-black text-white text-sm font-medium rounded-xl hover:bg-neutral-800 transition-colors duration-150"
+          <div className="relative sm:ml-auto">
+            <select
+              value={selectedRoom}
+              onChange={e => setSelectedRoom(e.target.value)}
+              className="appearance-none w-full sm:w-auto pl-3 pr-8 py-2 bg-[#F9F9F9] border border-[#E5E5E5] rounded-xl text-xs font-semibold text-black outline-none focus:border-black focus:bg-white transition-colors cursor-pointer"
             >
-              + Schedule
-            </button>
+              <option value="" disabled>Select room</option>
+              {rooms.map(r => (
+                <option key={r.id} value={r.name}>{r.name}</option>
+              ))}
+            </select>
+            <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#999] pointer-events-none" />
           </div>
-
         </div>
+
       </div>
 
       {/* Main card */}

@@ -176,7 +176,7 @@ export default function SplashPage({ needsGoogleProfile = false, googleUser = nu
     <div className="w-full min-h-screen flex">
 
       {/* ── Left panel ── */}
-      <div className="hidden lg:flex flex-col w-[52%] bg-[#080808] px-16 py-14 relative overflow-hidden">
+      <div className="hidden md:flex flex-col md:w-[42%] lg:w-[52%] bg-[#080808] md:px-10 lg:px-16 py-14 relative overflow-hidden">
         <div className="absolute inset-0 opacity-50" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
         <div className="absolute -top-40 -left-20 w-[520px] h-[520px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.13) 0%, transparent 68%)' }} />
         <div className="absolute -bottom-32 -right-20 w-[420px] h-[420px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%)' }} />
@@ -238,7 +238,7 @@ export default function SplashPage({ needsGoogleProfile = false, googleUser = nu
         <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.032) 1px, transparent 1px)', backgroundSize: '22px 22px' }} />
 
         {/* Mobile logo */}
-        <div className="lg:hidden mb-10 text-center relative z-10">
+        <div className="md:hidden mb-10 text-center relative z-10">
           <h1 className="text-5xl font-extrabold tracking-[-3px] text-black">
             MEET<span className="text-transparent" style={{ WebkitTextStroke: '2px #000' }}>N</span>PLAN
           </h1>

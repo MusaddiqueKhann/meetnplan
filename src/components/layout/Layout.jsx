@@ -11,7 +11,7 @@ export default function Layout({ currentPage, onNavigate, onOpenModal, rooms, bo
   return (
     <div className="flex w-full min-h-screen bg-[#F9F9F9]">
 
-      {/* Mobile backdrop */}
+      {/* Mobile/tablet backdrop */}
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/40 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
@@ -32,7 +32,7 @@ export default function Layout({ currentPage, onNavigate, onOpenModal, rooms, bo
 
       <main className="flex-1 lg:ml-[260px] min-h-screen flex flex-col">
 
-        {/* Mobile top bar */}
+        {/* Mobile/tablet top bar */}
         <header className="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-[#EBEBEB] sticky top-0 z-30">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-black rounded-xl flex items-center justify-center flex-shrink-0">
@@ -46,7 +46,7 @@ export default function Layout({ currentPage, onNavigate, onOpenModal, rooms, bo
           </button>
         </header>
 
-        <div className="flex-1 flex flex-col max-w-[1180px] w-full mx-auto p-4 sm:p-6 lg:p-8">
+        <div className="flex-1 flex flex-col max-w-[1180px] w-full mx-auto p-4 md:p-5 lg:p-8">
           {children}
         </div>
       </main>

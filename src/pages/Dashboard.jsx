@@ -166,7 +166,7 @@ export default function Dashboard({ onOpenModal, bookings = [], deleteBooking, r
       </div>
 
       {/* Chart + Daily Pulse */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
 
         {/* Weekly bar chart */}
         <Card className="lg:col-span-2 p-5 sm:p-6">
