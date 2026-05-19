@@ -119,6 +119,9 @@ export default function Layout({
         onLogout={onLogout}
         user={user}
         unreadCount={unreadCount}
+        notifications={notifications}
+        markNotificationRead={markNotificationRead}
+        markAllNotificationsRead={markAllNotificationsRead}
         onNavigateProfile={() => handleNavigate('profile')}
       />
 

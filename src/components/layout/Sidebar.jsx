@@ -121,7 +121,9 @@ export default function Sidebar({
     ? [...BASE_NAV, { id: 'admin', label: 'Admin Panel', icon: ShieldCheck }]
     : BASE_NAV
 
-  const isActive = (b) => !b.status || b.status === 'approved' || b.status === 'rescheduled'
+  const isActive = (b) =>
+    !b.status || b.status === 'approved' || b.status === 'rescheduled' ||
+    b.status === 'waiting_for_action' || b.status === 'priority_pending'
 
   const isRoomLive = (roomName) => bookings.some(b =>
     isActive(b) && b.room === roomName && b.date === todayStr &&
