@@ -65,7 +65,12 @@ export default function Dashboard({
   tomorrowDate.setDate(now.getDate() + 1)
   const tomorrowStr = `${tomorrowDate.getFullYear()}-${String(tomorrowDate.getMonth() + 1).padStart(2, '0')}-${String(tomorrowDate.getDate()).padStart(2, '0')}`
 
-  const isActive = (b) => !b.status || b.status === 'approved' || b.status === 'rescheduled'
+  const isActive = (b) =>
+    !b.status ||
+    b.status === 'approved' ||
+    b.status === 'rescheduled' ||
+    b.status === 'waiting_for_action' ||
+    b.status === 'priority_pending'
 
   const todayBookings    = bookings.filter(b => b.date === todayStr && isActive(b))
   const liveItems        = todayBookings.filter(b => nowMinutes >= b.startMinutes && nowMinutes < b.endMinutes)
@@ -394,33 +399,44 @@ export default function Dashboard({
                   : `${duration}m`
                 const person = item.coordinator || item.companyName || null
                 const statusInfo = STATUS_BADGE[item.status]
+                const isWaiting    = item.status === 'waiting_for_action'
+                const isPriPending = item.status === 'priority_pending'
+                const isConflicted = isWaiting || isPriPending
+                const liveClean    = item.isLive && !isConflicted
 
                 return (
                   <div key={item.id} className="flex gap-2.5 group">
                     <div className="w-10 flex-shrink-0 text-right pt-2.5">
-                      <span className={`text-[10px] font-bold leading-none ${item.isLive ? 'text-black' : 'text-[#AAAAAA]'}`}>
+                      <span className={`text-[10px] font-bold leading-none ${liveClean ? 'text-black' : 'text-[#AAAAAA]'}`}>
                         {item.time}
                       </span>
                     </div>
                     <div className="flex flex-col items-center flex-shrink-0" style={{ width: 14 }}>
                       <div className={`w-3 h-3 rounded-full flex-shrink-0 mt-2 z-10
-                        ${item.isLive
+                        ${liveClean
                           ? 'bg-black ring-2 ring-black ring-offset-2'
-                          : item.isPast ? 'bg-[#CCCCCC]' : 'bg-white border-2 border-[#CCCCCC]'}`}
+                          : isWaiting    ? 'bg-red-400 ring-2 ring-red-300 ring-offset-2'
+                          : isPriPending ? 'bg-amber-400 ring-2 ring-amber-300 ring-offset-2'
+                          : item.isPast  ? 'bg-[#CCCCCC]'
+                          : 'bg-white border-2 border-[#CCCCCC]'}`}
                       />
                       {!isLast && <div className="w-px bg-[#E8E8E8] flex-1 mt-1" style={{ minHeight: 24 }} />}
                     </div>
                     <div
                       onClick={() => onNavigate?.('today')}
                       className={`flex-1 mb-2.5 rounded-xl border transition-all cursor-pointer
-                        ${item.isLive
+                        ${liveClean
                           ? 'bg-black border-black'
-                          : item.isPast
-                            ? 'bg-[#F7F7F7] border-[#EFEFEF] hover:border-[#D4D4D4]'
-                            : 'bg-white border-[#E8E8E8] group-hover:border-[#D4D4D4] group-hover:shadow-sm'}`}
+                          : isWaiting
+                            ? 'bg-red-50 border-red-200 hover:border-red-300'
+                            : isPriPending
+                              ? 'bg-amber-50 border-amber-200 hover:border-amber-300'
+                              : item.isPast
+                                ? 'bg-[#F7F7F7] border-[#EFEFEF] hover:border-[#D4D4D4]'
+                                : 'bg-white border-[#E8E8E8] group-hover:border-[#D4D4D4] group-hover:shadow-sm'}`}
                     >
                       <div className="px-3 py-2.5">
-                        {item.isLive && (
+                        {liveClean && (
                           <div className="flex items-center gap-1 mb-1.5">
                             <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
                             <span className="text-[9px] font-black uppercase tracking-widest text-green-400">Live Now</span>
@@ -428,7 +444,8 @@ export default function Dashboard({
                         )}
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <p className={`text-xs font-bold leading-snug ${item.isLive ? 'text-white' : item.isPast ? 'text-[#888]' : 'text-black'}`}>
+                            <p className={`text-xs font-bold leading-snug
+                              ${liveClean ? 'text-white' : item.isPast && !isConflicted ? 'text-[#888]' : 'text-black'}`}>
                               {item.title}
                             </p>
                             {/* Status + type badges */}
@@ -448,24 +465,21 @@ export default function Dashboard({
                           {canDelete(item) && (
                             <button
                               onClick={(e) => { e.stopPropagation(); deleteBooking?.(item.id) }}
-                              className={`flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-lg transition-colors
-                                ${item.isLive
-                                  ? 'text-white/30 hover:bg-white/20 hover:text-white'
-                                  : 'text-[#CCCCCC] hover:bg-red-50 hover:text-red-500'}`}
+                              className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-lg transition-colors text-[#CCCCCC] hover:bg-red-50 hover:text-red-500"
                             >
                               <Trash2 size={12} />
                             </button>
                           )}
                         </div>
                         <div className={`flex items-center flex-wrap gap-x-2 gap-y-0 mt-1 text-[10px] font-medium
-                          ${item.isLive ? 'text-white/55' : item.isPast ? 'text-[#BBB]' : 'text-[#999]'}`}>
-                          <span className={`font-semibold ${item.isLive ? 'text-white/80' : item.isPast ? 'text-[#999]' : 'text-[#555]'}`}>
+                          ${liveClean ? 'text-white/55' : item.isPast && !isConflicted ? 'text-[#BBB]' : 'text-[#999]'}`}>
+                          <span className={`font-semibold ${liveClean ? 'text-white/80' : item.isPast && !isConflicted ? 'text-[#999]' : 'text-[#555]'}`}>
                             {item.room}
                           </span>
                           {person && <><span>·</span><span>{person}</span></>}
                           <span>·</span><span>{durationLbl}</span>
                           <span>·</span>
-                          <span className={item.isLive ? 'text-white/70' : ''}>{item.time} – {endTime}</span>
+                          <span>{item.time} – {endTime}</span>
                         </div>
                       </div>
                     </div>
