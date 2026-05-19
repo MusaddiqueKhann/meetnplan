@@ -195,7 +195,7 @@ export default function Calendar({ onOpenModal, rooms = [], bookings = [], delet
 
   const isActive = (b) =>
     !b.status || b.status === 'approved' || b.status === 'rescheduled' ||
-    b.status === 'waiting_for_action' || b.status === 'priority_pending'
+    b.status === 'waiting_for_action'
 
   const bookingEvents = bookings
     .filter(isActive)

@@ -69,8 +69,7 @@ export default function Dashboard({
     !b.status ||
     b.status === 'approved' ||
     b.status === 'rescheduled' ||
-    b.status === 'waiting_for_action' ||
-    b.status === 'priority_pending'
+    b.status === 'waiting_for_action'
 
   const todayBookings    = bookings.filter(b => b.date === todayStr && isActive(b))
   const liveItems        = todayBookings.filter(b => nowMinutes >= b.startMinutes && nowMinutes < b.endMinutes)

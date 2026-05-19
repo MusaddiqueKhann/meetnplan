@@ -49,7 +49,7 @@ export default function TodaysMeetings({ onOpenModal, bookings = [], deleteBooki
 
   const isActive = (b) =>
     !b.status || b.status === 'approved' || b.status === 'rescheduled' ||
-    b.status === 'waiting_for_action' || b.status === 'priority_pending'
+    b.status === 'waiting_for_action'
 
   const mapBooking = b => ({
     id:               b.id,
