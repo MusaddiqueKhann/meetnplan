@@ -593,7 +593,7 @@ export default function App() {
       />
     ),
     today: (
-      <TodaysMeetings {...sharedProps} onOpenModal={() => setModalOpen(true)} deleteBooking={deleteBooking} />
+      <TodaysMeetings {...sharedProps} onOpenModal={() => setModalOpen(true)} deleteBooking={deleteBooking} rescheduleBooking={rescheduleBooking} settings={settings} />
     ),
     calendar: (
       <Calendar

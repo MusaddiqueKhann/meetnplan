@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { MapPin, User, CalendarClock, Trash2, Clock, ChevronDown, CheckCircle2, Building2 } from 'lucide-react'
+import { MapPin, User, CalendarClock, Trash2, Clock, ChevronDown, CheckCircle2, Building2, Pencil } from 'lucide-react'
+import RescheduleInline from '../components/RescheduleInline'
 
 function pad(n) { return String(n).padStart(2, '0') }
 
@@ -21,10 +22,12 @@ function getMeetingStatus(meeting, nowMinutes) {
   return 'upcoming'
 }
 
-export default function TodaysMeetings({ onOpenModal, bookings = [], deleteBooking, rooms = [], user }) {
+export default function TodaysMeetings({ onOpenModal, bookings = [], deleteBooking, rescheduleBooking, rooms = [], user, settings = {} }) {
+  const canEdit   = (b) => b.ownerEmail === user?.email
   const canDelete = (b) => user?.role === 'admin' || b.ownerEmail === user?.email
   const [now,          setNow]          = useState(new Date())
   const [selectedRoom, setSelectedRoom] = useState('')
+  const [editingId,    setEditingId]    = useState(null)
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 60_000)
@@ -44,7 +47,9 @@ export default function TodaysMeetings({ onOpenModal, bookings = [], deleteBooki
   tomorrowDate.setDate(tomorrowDate.getDate() + 1)
   const tomorrowStr = dateStr(tomorrowDate)
 
-  const isActive = (b) => !b.status || b.status === 'approved' || b.status === 'rescheduled'
+  const isActive = (b) =>
+    !b.status || b.status === 'approved' || b.status === 'rescheduled' ||
+    b.status === 'waiting_for_action' || b.status === 'priority_pending'
 
   const mapBooking = b => ({
     id:          b.id,
@@ -328,14 +333,24 @@ export default function TodaysMeetings({ onOpenModal, bookings = [], deleteBooki
                                   <p className={`text-sm font-bold leading-snug truncate flex-1 ${isPast ? 'text-[#888]' : 'text-black'}`}>
                                     {meeting.title}
                                   </p>
-                                  {canDelete(meeting) && (
-                                    <button
-                                      onClick={e => { e.stopPropagation(); deleteBooking?.(meeting.id) }}
-                                      className="p-1 rounded-lg flex-shrink-0 text-[#CCC] hover:text-red-500 hover:bg-red-50 transition-colors"
-                                    >
-                                      <Trash2 size={12} />
-                                    </button>
-                                  )}
+                                  <div className="flex items-center gap-1 flex-shrink-0">
+                                    {canEdit(meeting) && isUpcoming && (
+                                      <button
+                                        onClick={e => { e.stopPropagation(); setEditingId(id => id === meeting.id ? null : meeting.id) }}
+                                        className={`p-1 rounded-lg transition-colors ${editingId === meeting.id ? 'bg-black text-white' : 'text-[#CCC] hover:text-black hover:bg-[#F5F5F5]'}`}
+                                      >
+                                        <Pencil size={12} />
+                                      </button>
+                                    )}
+                                    {canDelete(meeting) && (
+                                      <button
+                                        onClick={e => { e.stopPropagation(); deleteBooking?.(meeting.id) }}
+                                        className="p-1 rounded-lg text-[#CCC] hover:text-red-500 hover:bg-red-50 transition-colors"
+                                      >
+                                        <Trash2 size={12} />
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
                                 <div className={`flex flex-wrap items-center gap-x-3 gap-y-0.5 ${isPast ? 'text-[#BBB]' : 'text-[#888]'}`}>
                                   <span className="flex items-center gap-1 text-xs font-medium">
@@ -353,6 +368,20 @@ export default function TodaysMeetings({ onOpenModal, bookings = [], deleteBooki
                                 </div>
                               </div>
                             </div>
+                            {/* Inline reschedule form */}
+                            {editingId === meeting.id && (
+                              <RescheduleInline
+                                booking={bookings.find(b => b.id === meeting.id) ?? meeting}
+                                bookings={bookings}
+                                rooms={rooms}
+                                settings={settings}
+                                onReschedule={async (bk, newData) => {
+                                  await rescheduleBooking?.(bk, newData)
+                                  setEditingId(null)
+                                }}
+                                onCancel={() => setEditingId(null)}
+                              />
+                            )}
                           </div>
                         )}
                       </div>
@@ -373,23 +402,48 @@ export default function TodaysMeetings({ onOpenModal, bookings = [], deleteBooki
                   </div>
                   <div className="divide-y divide-[#F5F5F5]">
                     {tomorrowMeetings.map(m => (
-                      <div key={m.id} className="flex items-center gap-3 px-4 py-3">
-                        <div className="w-14 flex-shrink-0 text-right">
-                          <p className="text-[11px] font-bold text-[#777]">{toAmPm(m.startH, m.startM)}</p>
-                          <p className="text-[9px] font-medium text-[#CCC]">–{toAmPm(m.endH, m.endM)}</p>
+                      <div key={m.id} className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-14 flex-shrink-0 text-right">
+                            <p className="text-[11px] font-bold text-[#777]">{toAmPm(m.startH, m.startM)}</p>
+                            <p className="text-[9px] font-medium text-[#CCC]">–{toAmPm(m.endH, m.endM)}</p>
+                          </div>
+                          <div className="w-px h-8 bg-[#E5E5E5] flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-black truncate">{m.title}</p>
+                            <p className="text-[10px] text-[#999] mt-0.5 font-medium">{m.organizer !== '—' ? m.organizer : m.room}</p>
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {canEdit(m) && (
+                              <button
+                                onClick={e => { e.stopPropagation(); setEditingId(id => id === m.id ? null : m.id) }}
+                                className={`p-1 rounded-lg transition-colors ${editingId === m.id ? 'bg-black text-white' : 'text-[#CCC] hover:text-black hover:bg-[#F5F5F5]'}`}
+                              >
+                                <Pencil size={12} />
+                              </button>
+                            )}
+                            {canDelete(m) && (
+                              <button
+                                onClick={e => { e.stopPropagation(); deleteBooking?.(m.id) }}
+                                className="p-1 rounded-lg text-[#CCC] hover:text-red-500 hover:bg-red-50 transition-colors"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        <div className="w-px h-8 bg-[#E5E5E5] flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-black truncate">{m.title}</p>
-                          <p className="text-[10px] text-[#999] mt-0.5 font-medium">{m.organizer !== '—' ? m.organizer : m.room}</p>
-                        </div>
-                        {canDelete(m) && (
-                          <button
-                            onClick={e => { e.stopPropagation(); deleteBooking?.(m.id) }}
-                            className="p-1 rounded-lg flex-shrink-0 text-[#CCC] hover:text-red-500 hover:bg-red-50 transition-colors"
-                          >
-                            <Trash2 size={12} />
-                          </button>
+                        {editingId === m.id && (
+                          <RescheduleInline
+                            booking={bookings.find(b => b.id === m.id) ?? m}
+                            bookings={bookings}
+                            rooms={rooms}
+                            settings={settings}
+                            onReschedule={async (bk, newData) => {
+                              await rescheduleBooking?.(bk, newData)
+                              setEditingId(null)
+                            }}
+                            onCancel={() => setEditingId(null)}
+                          />
                         )}
                       </div>
                     ))}
