@@ -187,7 +187,7 @@ export default function DatePicker({ value, onChange, required, minDate, maxDate
         type="button"
         onClick={toggle}
         className={triggerClass
-          ? `${triggerClass} ${open ? '!border-black !bg-white' : ''}`
+          ? `${triggerClass} flex items-center justify-between cursor-pointer ${open ? '!border-black !bg-white' : ''}`
           : `w-full px-3 py-2 rounded-xl text-[12px] flex items-center justify-between transition-all cursor-pointer outline-none border ${open ? 'bg-white border-black shadow-sm' : 'bg-[#F8F8F8] border-transparent hover:bg-[#F0F0F0]'}`
         }
       >
