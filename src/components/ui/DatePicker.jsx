@@ -2,16 +2,15 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
 
-const MONTHS = ['January','February','March','April','May','June',
-                'July','August','September','October','November','December']
-const DAYS   = ['S','M','T','W','T','F','S']
-const DROPDOWN_H = 265
+const MONTHS       = ['January','February','March','April','May','June','July','August','September','October','November','December']
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+const DAYS         = ['S','M','T','W','T','F','S']
 
 function localStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-export default function DatePicker({ value, onChange, required, minDate, maxDate, offDays = [5, 6], dropUp = false }) {
+export default function DatePicker({ value, onChange, required, minDate, maxDate, offDays = [5, 6] }) {
   const today = new Date()
   const [open, setOpen] = useState(false)
   const [view, setView] = useState(() => {
@@ -33,20 +32,18 @@ export default function DatePicker({ value, onChange, required, minDate, maxDate
 
   useEffect(() => {
     if (!open) return
-    const onScroll = () => {
+    const onReflow = () => {
       if (triggerRef.current) setPos(calcPos(triggerRef.current.getBoundingClientRect()))
     }
-    window.addEventListener('scroll', onScroll, true)
-    window.addEventListener('resize', onScroll)
-    return () => { window.removeEventListener('scroll', onScroll, true); window.removeEventListener('resize', onScroll) }
+    window.addEventListener('scroll', onReflow, true)
+    window.addEventListener('resize', onReflow)
+    return () => { window.removeEventListener('scroll', onReflow, true); window.removeEventListener('resize', onReflow) }
   }, [open])
 
   function calcPos(rect) {
-    const minW   = Math.max(rect.width, 260)
-    const openUp = dropUp || (window.innerHeight - rect.bottom < DROPDOWN_H && rect.top >= DROPDOWN_H)
-    return openUp
-      ? { bottom: window.innerHeight - rect.top + 6, left: rect.left, width: minW }
-      : { top: rect.bottom + 6, left: rect.left, width: minW }
+    const w = Math.max(rect.width, 200)
+    const left = rect.left + rect.width / 2 - w / 2
+    return { top: rect.bottom + 8, left: Math.max(8, left), width: w }
   }
 
   const toggle = () => {
@@ -97,67 +94,89 @@ export default function DatePicker({ value, onChange, required, minDate, maxDate
     <div
       ref={dropdownRef}
       style={{ position: 'fixed', zIndex: 9999, ...pos }}
-      className="bg-white rounded-2xl border border-[#EBEBEB] shadow-[0_8px_40px_-4px_rgba(0,0,0,0.16),0_2px_8px_rgba(0,0,0,0.06)]"
+      className="bg-white rounded-xl border border-[#E4E4E4] shadow-[0_20px_56px_-8px_rgba(0,0,0,0.20),0_4px_16px_rgba(0,0,0,0.06)] overflow-hidden"
     >
-      {/* Month header */}
-      <div className="flex items-center justify-between px-3 pt-2.5 pb-1.5">
-        <button type="button" onClick={() => setView(new Date(year, month - 1, 1))}
-          className="w-5 h-5 flex items-center justify-center rounded-md text-[#888] hover:text-black hover:bg-[#F5F5F5] transition-all">
-          <ChevronLeft size={11} strokeWidth={2.5} />
-        </button>
-        <p className="text-[11px] font-bold text-black">{MONTHS[month]} {year}</p>
-        <button type="button" onClick={() => setView(new Date(year, month + 1, 1))}
-          className="w-5 h-5 flex items-center justify-center rounded-md text-[#888] hover:text-black hover:bg-[#F5F5F5] transition-all">
-          <ChevronRight size={11} strokeWidth={2.5} />
-        </button>
-      </div>
-
-      {/* Day-of-week labels */}
-      <div className="grid grid-cols-7 px-2">
-        {DAYS.map((d, i) => (
-          <div key={i} className="h-5 flex items-center justify-center text-[8px] font-bold text-[#CCCCCC] uppercase">
-            {d}
+      {/* Dark preview bar — mirrors TimePicker */}
+      <div className="bg-[#111] px-3 py-2 flex items-center justify-between gap-2">
+        {/* Selected date display */}
+        <div className="flex items-baseline gap-1.5">
+          <span className={`text-[26px] font-black tabular-nums leading-none tracking-tight transition-colors ${selected ? 'text-white' : 'text-white/25'}`}>
+            {selected ? String(selected.getDate()).padStart(2, '0') : '--'}
+          </span>
+          <div className="flex flex-col justify-end pb-0.5 gap-[2px]">
+            <span className={`text-[11px] font-bold leading-none transition-colors ${selected ? 'text-white' : 'text-white/25'}`}>
+              {selected ? MONTHS_SHORT[selected.getMonth()] : 'Mon'}
+            </span>
+            <span className={`text-[9px] font-medium leading-none transition-colors ${selected ? 'text-white/55' : 'text-white/20'}`}>
+              {selected ? selected.getFullYear() : '0000'}
+            </span>
           </div>
-        ))}
+        </div>
+
+        {/* Month navigation */}
+        <div className="flex items-center gap-0.5 flex-shrink-0">
+          <button type="button" onClick={() => setView(new Date(year, month - 1, 1))}
+            className="w-6 h-6 flex items-center justify-center rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-all">
+            <ChevronLeft size={11} strokeWidth={2.5} />
+          </button>
+          <span className="text-[10px] font-bold text-white/75 min-w-[64px] text-center tabular-nums">
+            {MONTHS_SHORT[month]} {year}
+          </span>
+          <button type="button" onClick={() => setView(new Date(year, month + 1, 1))}
+            className="w-6 h-6 flex items-center justify-center rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-all">
+            <ChevronRight size={11} strokeWidth={2.5} />
+          </button>
+        </div>
       </div>
 
-      {/* Date grid */}
-      <div className="grid grid-cols-7 px-2 pb-2">
-        {cells.map(({ day, cur, date }, i) => {
-          const sel = isSel(date)
-          const tod = isTod(date)
-          const dis = isDisabled(date)
-          return (
-            <div key={i} className="flex items-center justify-center">
-              <button type="button" onClick={() => pick(date)} disabled={dis}
-                className={[
-                  'w-6 h-6 rounded-full text-[10px] transition-all flex items-center justify-center',
-                  dis         ? 'text-[#E0E0E0] cursor-not-allowed'                                        :
-                  sel         ? 'bg-black text-white font-bold cursor-pointer'                              :
-                  tod && !sel ? 'bg-[#F0F0F0] text-black font-bold ring-[1.5px] ring-black ring-offset-1 cursor-pointer' :
-                  cur         ? 'text-[#1A1A1A] font-medium hover:bg-[#F5F5F5] cursor-pointer'             :
-                                'text-[#D4D4D4] cursor-not-allowed',
-                ].join(' ')}
-              >
-                {day}
-              </button>
+      <div className="px-2 pt-1.5 pb-1.5">
+        {/* Day-of-week labels */}
+        <div className="grid grid-cols-7 mb-0.5">
+          {DAYS.map((d, i) => (
+            <div key={i} className="h-4 flex items-center justify-center text-[8px] font-bold text-neutral-400 uppercase tracking-[0.06em]">
+              {d}
             </div>
-          )
-        })}
-      </div>
+          ))}
+        </div>
 
-      {/* Footer */}
-      <div className="flex items-center justify-between px-3 py-2 border-t border-[#F2F2F2]">
-        <button type="button"
-          onClick={() => { onChange({ target: { value: '' } }); setOpen(false) }}
-          className="text-[10px] font-semibold text-[#BBBBBB] hover:text-black transition-colors">
-          Clear
-        </button>
-        <button type="button" onClick={() => !todayDisabled && pick(today)} disabled={todayDisabled}
-          className={`text-[10px] font-semibold rounded px-2 py-1 transition-colors
-            ${todayDisabled ? 'bg-[#F0F0F0] text-[#CCC] cursor-not-allowed' : 'text-white bg-black hover:bg-neutral-800'}`}>
-          Today
-        </button>
+        {/* Date grid */}
+        <div className="grid grid-cols-7 gap-y-0.5">
+          {cells.map(({ day, cur, date }, i) => {
+            const sel = isSel(date)
+            const tod = isTod(date)
+            const dis = isDisabled(date)
+            return (
+              <div key={i} className="flex items-center justify-center">
+                <button type="button" onClick={() => pick(date)} disabled={dis}
+                  className={[
+                    'w-[22px] h-[22px] rounded-full text-[10px] font-semibold transition-all flex items-center justify-center',
+                    dis         ? 'text-neutral-300 cursor-not-allowed'                                          :
+                    sel         ? 'bg-[#111] text-white font-bold cursor-pointer shadow-sm'                      :
+                    tod && !sel ? 'text-black font-bold ring-[1.5px] ring-black ring-offset-1 cursor-pointer'    :
+                    cur         ? 'text-neutral-700 hover:bg-neutral-100 hover:text-black cursor-pointer'        :
+                                  'text-neutral-300 cursor-not-allowed',
+                  ].join(' ')}
+                >
+                  {day}
+                </button>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-1.5 mt-1 border-t border-neutral-100">
+          <button type="button"
+            onClick={() => { onChange({ target: { value: '' } }); setOpen(false) }}
+            className="text-[9px] font-medium text-neutral-400 hover:text-black transition-colors px-0.5">
+            Clear
+          </button>
+          <button type="button" onClick={() => !todayDisabled && pick(today)} disabled={todayDisabled}
+            className={`text-[9px] font-bold rounded-full px-2.5 py-0.5 transition-all
+              ${todayDisabled ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed' : 'bg-[#111] text-white hover:bg-neutral-800'}`}>
+            Today
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -167,13 +186,13 @@ export default function DatePicker({ value, onChange, required, minDate, maxDate
       <button
         type="button"
         onClick={toggle}
-        className={`w-full px-4 py-3 rounded-2xl text-sm flex items-center justify-between transition-all cursor-pointer outline-none border
-          ${open ? 'bg-white border-black' : 'bg-[#F9F9F9] border-[#E5E5E5] hover:border-[#C8C8C8]'}`}
+        className={`w-full px-3 py-2 rounded-xl text-[12px] flex items-center justify-between transition-all cursor-pointer outline-none border
+          ${open ? 'bg-white border-black shadow-sm' : 'bg-[#F8F8F8] border-transparent hover:bg-[#F0F0F0]'}`}
       >
-        <span className={display ? 'text-black font-medium' : 'text-[#AAAAAA]'}>
+        <span className={`text-[12px] font-medium ${display ? 'text-black' : 'text-[#BBBBBB]'}`}>
           {display || 'Select date'}
         </span>
-        <CalendarDays size={14} className={open ? 'text-black' : 'text-[#BBBBBB]'} />
+        <CalendarDays size={12} className={open ? 'text-black' : 'text-[#C8C8C8]'} />
       </button>
 
       {open && createPortal(dropdown, document.body)}

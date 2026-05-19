@@ -299,88 +299,92 @@ export default function TodaysMeetings({ onOpenModal, bookings = [], deleteBooki
                             </div>
                           </div>
                         ) : (
-                          <div className="flex items-stretch gap-3 group/card">
-                            {/* Time column */}
-                            <div className="w-14 flex-shrink-0 flex flex-col items-end justify-center py-3">
-                              <p className={`text-xs font-bold ${isPast ? 'text-[#BBB]' : 'text-black'}`}>
-                                {toAmPm(meeting.startH, meeting.startM)}
-                              </p>
-                              <p className={`text-[10px] font-medium ${isPast ? 'text-[#CCC]' : 'text-[#AAA]'}`}>
-                                {toAmPm(meeting.endH, meeting.endM)}
-                              </p>
-                            </div>
+                          <div>
+                            <div className="flex items-stretch gap-3 group/card">
+                              {/* Time column */}
+                              <div className="w-14 flex-shrink-0 flex flex-col items-end justify-center py-3">
+                                <p className={`text-xs font-bold ${isPast ? 'text-[#BBB]' : 'text-black'}`}>
+                                  {toAmPm(meeting.startH, meeting.startM)}
+                                </p>
+                                <p className={`text-[10px] font-medium ${isPast ? 'text-[#CCC]' : 'text-[#AAA]'}`}>
+                                  {toAmPm(meeting.endH, meeting.endM)}
+                                </p>
+                              </div>
 
-                            {/* Card body */}
-                            <div className={`flex-1 min-w-0 rounded-xl overflow-hidden transition-all duration-150
-                              ${isPast
-                                ? 'bg-[#F7F7F7] border border-[#E8E8E8] shadow-[inset_3px_0_0_#E0E0E0]'
-                                : 'bg-white border border-[#E5E5E5] hover:border-neutral-300 hover:shadow-sm shadow-[inset_3px_0_0_#DCDCF0]'
-                              }`}
-                            >
-                              <div className="px-4 py-3">
-                                <div className="flex items-center gap-2 mb-1">
-                                  {isPast && (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#F0F0F0] flex-shrink-0">
-                                      <CheckCircle2 size={9} className="text-[#AAA]" />
-                                      <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#AAA]">Ended</span>
-                                    </span>
-                                  )}
-                                  {isUpcoming && (
-                                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-50 flex-shrink-0">
-                                      <span className="text-[9px] font-extrabold uppercase tracking-widest text-indigo-400">Up Next</span>
-                                    </span>
-                                  )}
-                                  <p className={`text-sm font-bold leading-snug truncate flex-1 ${isPast ? 'text-[#888]' : 'text-black'}`}>
-                                    {meeting.title}
-                                  </p>
-                                  <div className="flex items-center gap-1 flex-shrink-0">
-                                    {canEdit(meeting) && isUpcoming && (
-                                      <button
-                                        onClick={e => { e.stopPropagation(); setEditingId(id => id === meeting.id ? null : meeting.id) }}
-                                        className={`p-1 rounded-lg transition-colors ${editingId === meeting.id ? 'bg-black text-white' : 'text-[#CCC] hover:text-black hover:bg-[#F5F5F5]'}`}
-                                      >
-                                        <Pencil size={12} />
-                                      </button>
+                              {/* Card body */}
+                              <div className={`flex-1 min-w-0 rounded-xl overflow-hidden transition-all duration-150
+                                ${isPast
+                                  ? 'bg-[#F7F7F7] border border-[#E8E8E8] shadow-[inset_3px_0_0_#E0E0E0]'
+                                  : 'bg-white border border-[#E5E5E5] hover:border-neutral-300 hover:shadow-sm shadow-[inset_3px_0_0_#DCDCF0]'
+                                }`}
+                              >
+                                <div className="px-4 py-3">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    {isPast && (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#F0F0F0] flex-shrink-0">
+                                        <CheckCircle2 size={9} className="text-[#AAA]" />
+                                        <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#AAA]">Ended</span>
+                                      </span>
                                     )}
-                                    {canDelete(meeting) && (
-                                      <button
-                                        onClick={e => { e.stopPropagation(); deleteBooking?.(meeting.id) }}
-                                        className="p-1 rounded-lg text-[#CCC] hover:text-red-500 hover:bg-red-50 transition-colors"
-                                      >
-                                        <Trash2 size={12} />
-                                      </button>
+                                    {isUpcoming && (
+                                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-50 flex-shrink-0">
+                                        <span className="text-[9px] font-extrabold uppercase tracking-widest text-indigo-400">Up Next</span>
+                                      </span>
                                     )}
+                                    <p className={`text-sm font-bold leading-snug truncate flex-1 ${isPast ? 'text-[#888]' : 'text-black'}`}>
+                                      {meeting.title}
+                                    </p>
+                                    <div className="flex items-center gap-1 flex-shrink-0">
+                                      {canEdit(meeting) && isUpcoming && (
+                                        <button
+                                          onClick={e => { e.stopPropagation(); setEditingId(id => id === meeting.id ? null : meeting.id) }}
+                                          className={`p-1 rounded-lg transition-colors ${editingId === meeting.id ? 'bg-black text-white' : 'text-[#CCC] hover:text-black hover:bg-[#F5F5F5]'}`}
+                                        >
+                                          <Pencil size={12} />
+                                        </button>
+                                      )}
+                                      {canDelete(meeting) && (
+                                        <button
+                                          onClick={e => { e.stopPropagation(); deleteBooking?.(meeting.id) }}
+                                          className="p-1 rounded-lg text-[#CCC] hover:text-red-500 hover:bg-red-50 transition-colors"
+                                        >
+                                          <Trash2 size={12} />
+                                        </button>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                                <div className={`flex flex-wrap items-center gap-x-3 gap-y-0.5 ${isPast ? 'text-[#BBB]' : 'text-[#888]'}`}>
-                                  <span className="flex items-center gap-1 text-xs font-medium">
-                                    <MapPin size={11} />
-                                    <span className={isPast ? '' : 'text-[#555] font-semibold'}>{meeting.room}</span>
-                                  </span>
-                                  <span className="flex items-center gap-1 text-xs font-medium">
-                                    <User size={11} />
-                                    <span className={isPast ? '' : 'text-[#555] font-semibold'}>{meeting.organizer}</span>
-                                  </span>
-                                  <span className="flex items-center gap-1 text-xs font-medium">
-                                    <Clock size={11} />
-                                    {durationLabel}
-                                  </span>
+                                  <div className={`flex flex-wrap items-center gap-x-3 gap-y-0.5 ${isPast ? 'text-[#BBB]' : 'text-[#888]'}`}>
+                                    <span className="flex items-center gap-1 text-xs font-medium">
+                                      <MapPin size={11} />
+                                      <span className={isPast ? '' : 'text-[#555] font-semibold'}>{meeting.room}</span>
+                                    </span>
+                                    <span className="flex items-center gap-1 text-xs font-medium">
+                                      <User size={11} />
+                                      <span className={isPast ? '' : 'text-[#555] font-semibold'}>{meeting.organizer}</span>
+                                    </span>
+                                    <span className="flex items-center gap-1 text-xs font-medium">
+                                      <Clock size={11} />
+                                      {durationLabel}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                            {/* Inline reschedule form */}
+                            {/* Inline reschedule form — below the row, aligned with card body */}
                             {editingId === meeting.id && (
-                              <RescheduleInline
-                                booking={bookings.find(b => b.id === meeting.id) ?? meeting}
-                                bookings={bookings}
-                                rooms={rooms}
-                                settings={settings}
-                                onReschedule={async (bk, newData) => {
-                                  await rescheduleBooking?.(bk, newData)
-                                  setEditingId(null)
-                                }}
-                                onCancel={() => setEditingId(null)}
-                              />
+                              <div className="pl-[calc(3.5rem+0.75rem)]">
+                                <RescheduleInline
+                                  booking={bookings.find(b => b.id === meeting.id) ?? meeting}
+                                  bookings={bookings}
+                                  rooms={rooms}
+                                  settings={settings}
+                                  onReschedule={async (bk, newData) => {
+                                    await rescheduleBooking?.(bk, newData)
+                                    setEditingId(null)
+                                  }}
+                                  onCancel={() => setEditingId(null)}
+                                />
+                              </div>
                             )}
                           </div>
                         )}

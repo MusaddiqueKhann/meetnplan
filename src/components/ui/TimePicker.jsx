@@ -61,10 +61,9 @@ export default function TimePicker({ value, onChange, required, minHour = 0, max
   }, [amEnabled, pmEnabled, period])
 
   function calcPos(rect) {
-    const openUp = dropUp || (window.innerHeight - rect.bottom < DROPDOWN_H && rect.top >= DROPDOWN_H)
-    return openUp
-      ? { bottom: window.innerHeight - rect.top + 6, left: rect.left, width: rect.width }
-      : { top: rect.bottom + 6, left: rect.left, width: rect.width }
+    const w = Math.max(rect.width, 200)
+    const left = rect.left + rect.width / 2 - w / 2
+    return { top: rect.bottom + 8, left: Math.max(8, left), width: w }
   }
 
   const toggle = () => {
@@ -96,54 +95,52 @@ export default function TimePicker({ value, onChange, required, minHour = 0, max
     <div
       ref={dropdownRef}
       style={{ position: 'fixed', zIndex: 9999, ...pos }}
-      className="bg-white rounded-2xl border border-[#E8E8E8] shadow-[0_12px_40px_-4px_rgba(0,0,0,0.18),0_4px_12px_rgba(0,0,0,0.06)] overflow-hidden"
+      className="bg-white rounded-xl border border-[#E4E4E4] shadow-[0_20px_56px_-8px_rgba(0,0,0,0.20),0_4px_16px_rgba(0,0,0,0.06)] overflow-hidden"
     >
       {/* Preview bar */}
-      <div className="bg-[#0A0A0A] px-4 pt-3.5 pb-3">
-        <div className="flex items-center justify-between">
-          {/* Time display */}
-          <div className="flex items-baseline gap-0.5">
-            <span className="text-[28px] font-black text-white tabular-nums leading-none tracking-tight">
-              {selH ? String(selH).padStart(2, '0') : '--'}
-            </span>
-            <span className="text-[22px] font-black text-white/25 leading-none mx-0.5">:</span>
-            <span className="text-[28px] font-black text-white tabular-nums leading-none tracking-tight">
-              {selM ?? '--'}
-            </span>
-          </div>
-          {/* AM / PM pill */}
-          <div className="flex bg-white/[0.08] rounded-xl p-0.5">
-            {['AM', 'PM'].map(p => {
-              const disabled = p === 'AM' ? !amEnabled : !pmEnabled
-              const active   = period === p
-              return (
-                <button key={p} type="button" onClick={() => pickPeriod(p)} disabled={disabled}
-                  className={`px-3 py-1 rounded-[10px] text-[11px] font-bold tracking-wide transition-all
-                    ${disabled  ? 'text-white/15 cursor-not-allowed'
-                    : active    ? 'bg-white text-black shadow-sm'
-                    :             'text-white/40 hover:text-white/70'}`}>
-                  {p}
-                </button>
-              )
-            })}
-          </div>
+      <div className="bg-[#111] px-3 py-2 flex items-center justify-between gap-2">
+        {/* Time display */}
+        <div className="flex items-baseline">
+          <span className={`text-[26px] font-black tabular-nums leading-none tracking-tight transition-colors ${selH ? 'text-white' : 'text-white/25'}`}>
+            {selH ? String(selH).padStart(2, '0') : '00'}
+          </span>
+          <span className={`text-[20px] font-black leading-none mx-0.5 transition-colors ${selH && selM != null ? 'text-white/50' : 'text-white/20'}`}>:</span>
+          <span className={`text-[26px] font-black tabular-nums leading-none tracking-tight transition-colors ${selM != null ? 'text-white' : 'text-white/25'}`}>
+            {selM ?? '00'}
+          </span>
+        </div>
+        {/* AM / PM toggle */}
+        <div className="flex bg-white/[0.1] rounded-full p-[3px] gap-0.5 flex-shrink-0">
+          {['AM', 'PM'].map(p => {
+            const disabled = p === 'AM' ? !amEnabled : !pmEnabled
+            const active   = period === p
+            return (
+              <button key={p} type="button" onClick={() => pickPeriod(p)} disabled={disabled}
+                className={`px-2.5 py-[5px] rounded-full text-[10px] font-bold tracking-wider transition-all
+                  ${disabled  ? 'text-white/20 cursor-not-allowed'
+                  : active    ? 'bg-white text-black shadow-sm'
+                  :             'text-white/45 hover:text-white/75'}`}>
+                {p}
+              </button>
+            )
+          })}
         </div>
       </div>
 
-      <div className="p-2.5 flex flex-col gap-2">
+      <div className="px-2 pt-1.5 pb-1.5 flex flex-col gap-1">
         {/* Hour grid */}
         <div>
-          <p className="text-[9px] font-extrabold text-neutral-300 uppercase tracking-[0.12em] mb-1.5 px-1">Hour</p>
-          <div className="grid grid-cols-4 gap-1">
+          <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1 px-0.5">Hour</p>
+          <div className="grid grid-cols-4 gap-0.5">
             {HOUR_GRID.map(h => {
               const allowed  = isHourAllowed(h)
               const selected = selH === h && selPeriod === period
               return (
                 <button key={h} type="button" onClick={() => pickHour(h)} disabled={!allowed}
-                  className={`py-2 rounded-xl text-[13px] font-semibold transition-all
-                    ${!allowed  ? 'text-neutral-200 cursor-not-allowed'
-                    : selected  ? 'bg-black text-white shadow-sm'
-                    :             'text-neutral-600 hover:bg-neutral-100 hover:text-black'}`}>
+                  className={`py-1.5 rounded-lg text-[12px] font-semibold transition-all
+                    ${!allowed  ? 'text-neutral-300 cursor-not-allowed'
+                    : selected  ? 'bg-[#111] text-white shadow-sm'
+                    :             'text-neutral-700 hover:bg-neutral-100 hover:text-black'}`}>
                   {String(h).padStart(2, '0')}
                 </button>
               )
@@ -152,16 +149,16 @@ export default function TimePicker({ value, onChange, required, minHour = 0, max
         </div>
 
         {/* Divider */}
-        <div className="h-px bg-neutral-100 mx-1" />
+        <div className="h-px bg-neutral-100 my-0.5" />
 
         {/* Minute row */}
         <div>
-          <p className="text-[9px] font-extrabold text-neutral-300 uppercase tracking-[0.12em] mb-1.5 px-1">Minute</p>
-          <div className="grid grid-cols-4 gap-1">
+          <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1 px-0.5">Minute</p>
+          <div className="grid grid-cols-4 gap-0.5">
             {MINUTES.map(m => (
               <button key={m} type="button" onClick={() => pickMin(m)}
-                className={`py-2 rounded-xl text-[13px] font-semibold transition-all
-                  ${selM === m ? 'bg-black text-white shadow-sm' : 'text-neutral-600 hover:bg-neutral-100 hover:text-black'}`}>
+                className={`py-1.5 rounded-lg text-[12px] font-semibold transition-all
+                  ${selM === m ? 'bg-[#111] text-white shadow-sm' : 'text-neutral-700 hover:bg-neutral-100 hover:text-black'}`}>
                 :{m}
               </button>
             ))}
@@ -176,13 +173,13 @@ export default function TimePicker({ value, onChange, required, minHour = 0, max
       <button
         type="button"
         onClick={toggle}
-        className={`w-full px-3.5 py-2.5 rounded-xl text-sm flex items-center justify-between transition-all cursor-pointer outline-none border
-          ${open ? 'bg-white border-black shadow-sm' : 'bg-[#F7F7F7] border-[#E8E8E8] hover:border-[#C8C8C8] hover:bg-white'}`}
+        className={`w-full px-3 py-2 rounded-xl text-[12px] flex items-center justify-between transition-all cursor-pointer outline-none border
+          ${open ? 'bg-white border-black shadow-sm' : 'bg-[#F8F8F8] border-transparent hover:bg-[#F0F0F0]'}`}
       >
-        <span className={`text-[13px] font-medium ${display ? 'text-black' : 'text-[#BABABA]'}`}>
+        <span className={`text-[12px] font-medium ${display ? 'text-black' : 'text-[#BBBBBB]'}`}>
           {display || 'Select time'}
         </span>
-        <Clock size={13} className={open ? 'text-black' : 'text-[#C0C0C0]'} />
+        <Clock size={12} className={open ? 'text-black' : 'text-[#C8C8C8]'} />
       </button>
 
       {open && createPortal(dropdown, document.body)}
