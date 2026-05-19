@@ -44,10 +44,7 @@ export default function DatePicker({ value, onChange, required, minDate, maxDate
     const w = Math.max(rect.width, 200)
     const left = rect.left + rect.width / 2 - w / 2
     const safeLeft = Math.max(8, Math.min(left, window.innerWidth - w - 8))
-    if (window.innerWidth < 768) {
-      return { bottom: window.innerHeight - rect.top + 8, left: safeLeft, width: w }
-    }
-    return { top: rect.bottom + 8, left: safeLeft, width: w }
+    return { bottom: window.innerHeight - rect.top + 8, left: safeLeft, width: w }
   }
 
   const toggle = () => {

@@ -1377,7 +1377,6 @@ function SettingsTab() {
                 <DatePicker
                   value={clearDate}
                   onChange={e => { setClearDate(e.target.value); setClearResult('') }}
-                  dropUp
                 />
               </div>
               <button
