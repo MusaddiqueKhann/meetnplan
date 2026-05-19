@@ -39,6 +39,12 @@ export default function TimePicker({ value, onChange, required, minHour = 0, max
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  // Auto-switch period when the current one becomes fully disabled (e.g. minHour jumps into PM)
+  useEffect(() => {
+    if (period === 'AM' && !amEnabled && pmEnabled) setPeriod('PM')
+    if (period === 'PM' && !pmEnabled && amEnabled) setPeriod('AM')
+  }, [amEnabled, pmEnabled, period])
+
   const { h: selH, m: selM, period: selPeriod } = parse(value)
 
   const emit = (h, m, p) => {

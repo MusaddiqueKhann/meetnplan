@@ -120,9 +120,11 @@ function RescheduleInline({ booking, bookings, rooms, settings, onReschedule, on
 
   const now              = new Date()
   const isSelectedToday  = date === todayStr()
-  const effectiveMinHour = isSelectedToday ? Math.max(workStartHour, now.getHours()) : workStartHour
   const dur              = booking.endMinutes - booking.startMinutes
   const durLabel         = `${Math.floor(dur / 60) > 0 ? `${Math.floor(dur / 60)}h ` : ''}${dur % 60 > 0 ? `${dur % 60}m` : ''}`.trim()
+  const effectiveMinHour = isSelectedToday ? Math.max(workStartHour, now.getHours()) : workStartHour
+  // Latest hour where the meeting still ends within work hours (duration-aware)
+  const effectiveMaxHour = Math.floor((workEndHour * 60 - dur) / 60) + 1
 
   function validate() {
     if (!date || !time || !room) return 'Please fill in all fields.'
@@ -132,8 +134,11 @@ function RescheduleInline({ booking, bookings, rooms, settings, onReschedule, on
     if (offDays.includes(d.getDay())) return 'That day is not a working day.'
     if (startMins < workStartHour * 60) return `Must start after ${workStartHour}:00.`
     if (endMins > workEndHour * 60)     return `Must end before ${workEndHour}:00.`
-    if (isSelectedToday && startMins <= now.getHours() * 60 + now.getMinutes())
-      return 'Please choose a future time.'
+    if (date === todayStr()) {
+      const freshNow = new Date()
+      if (startMins <= freshNow.getHours() * 60 + freshNow.getMinutes())
+        return 'Please choose a future time.'
+    }
     const conflict = bookings.find(b =>
       b.id !== booking.id && b.room === room && b.date === date &&
       b.status !== 'cancelled' && startMins < b.endMinutes && endMins > b.startMinutes
@@ -190,7 +195,7 @@ function RescheduleInline({ booking, bookings, rooms, settings, onReschedule, on
               onChange={e => { setTime(e.target.value); setError('') }}
               required
               minHour={effectiveMinHour}
-              maxHour={workEndHour}
+              maxHour={effectiveMaxHour}
             />
           </div>
         </div>
