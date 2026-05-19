@@ -97,17 +97,17 @@ export default function DatePicker({ value, onChange, required, minDate, maxDate
       className="bg-white rounded-xl border border-[#E4E4E4] shadow-[0_20px_56px_-8px_rgba(0,0,0,0.20),0_4px_16px_rgba(0,0,0,0.06)] overflow-hidden"
     >
       {/* Dark preview bar — mirrors TimePicker */}
-      <div className="bg-[#111] px-3 py-2 flex items-center justify-between gap-2">
+      <div className="bg-[#111] px-3 py-1.5 flex items-center justify-between gap-2">
         {/* Selected date display */}
         <div className="flex items-baseline gap-1.5">
-          <span className={`text-[26px] font-black tabular-nums leading-none tracking-tight transition-colors ${selected ? 'text-white' : 'text-white/25'}`}>
+          <span className={`text-[20px] font-black tabular-nums leading-none tracking-tight transition-colors ${selected ? 'text-white' : 'text-white/25'}`}>
             {selected ? String(selected.getDate()).padStart(2, '0') : '--'}
           </span>
           <div className="flex flex-col justify-end pb-0.5 gap-[2px]">
-            <span className={`text-[11px] font-bold leading-none transition-colors ${selected ? 'text-white' : 'text-white/25'}`}>
+            <span className={`text-[10px] font-bold leading-none transition-colors ${selected ? 'text-white' : 'text-white/25'}`}>
               {selected ? MONTHS_SHORT[selected.getMonth()] : 'Mon'}
             </span>
-            <span className={`text-[9px] font-medium leading-none transition-colors ${selected ? 'text-white/55' : 'text-white/20'}`}>
+            <span className={`text-[8px] font-medium leading-none transition-colors ${selected ? 'text-white/55' : 'text-white/20'}`}>
               {selected ? selected.getFullYear() : '0000'}
             </span>
           </div>
@@ -129,18 +129,18 @@ export default function DatePicker({ value, onChange, required, minDate, maxDate
         </div>
       </div>
 
-      <div className="px-2 pt-1.5 pb-1.5">
+      <div className="px-2 pt-1 pb-1">
         {/* Day-of-week labels */}
         <div className="grid grid-cols-7 mb-0.5">
           {DAYS.map((d, i) => (
-            <div key={i} className="h-4 flex items-center justify-center text-[8px] font-bold text-neutral-400 uppercase tracking-[0.06em]">
+            <div key={i} className="h-3 flex items-center justify-center text-[8px] font-bold text-neutral-400 uppercase tracking-[0.06em]">
               {d}
             </div>
           ))}
         </div>
 
         {/* Date grid */}
-        <div className="grid grid-cols-7 gap-y-0.5">
+        <div className="grid grid-cols-7">
           {cells.map(({ day, cur, date }, i) => {
             const sel = isSel(date)
             const tod = isTod(date)
@@ -149,7 +149,7 @@ export default function DatePicker({ value, onChange, required, minDate, maxDate
               <div key={i} className="flex items-center justify-center">
                 <button type="button" onClick={() => pick(date)} disabled={dis}
                   className={[
-                    'w-[22px] h-[22px] rounded-full text-[10px] font-semibold transition-all flex items-center justify-center',
+                    'w-5 h-5 rounded-full text-[10px] font-semibold transition-all flex items-center justify-center',
                     dis         ? 'text-neutral-300 cursor-not-allowed'                                          :
                     sel         ? 'bg-[#111] text-white font-bold cursor-pointer shadow-sm'                      :
                     tod && !sel ? 'text-black font-bold ring-[1.5px] ring-black ring-offset-1 cursor-pointer'    :
@@ -165,7 +165,7 @@ export default function DatePicker({ value, onChange, required, minDate, maxDate
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-1.5 mt-1 border-t border-neutral-100">
+        <div className="flex items-center justify-between pt-1 mt-0.5 border-t border-neutral-100">
           <button type="button"
             onClick={() => { onChange({ target: { value: '' } }); setOpen(false) }}
             className="text-[9px] font-medium text-neutral-400 hover:text-black transition-colors px-0.5">
