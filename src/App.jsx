@@ -72,9 +72,11 @@ export default function App() {
     workEndHour: 20, offDays: [5, 6], companies: ['Wolfhead', 'CloudGate', 'CodeLtd'],
   })
 
-  // Keep a ref to bookings so callbacks always access current data without stale closure
-  const bookingsRef = useRef(bookings)
-  useEffect(() => { bookingsRef.current = bookings }, [bookings])
+  // Keep refs so callbacks always access current data without stale closures
+  const bookingsRef      = useRef(bookings)
+  const notificationsRef = useRef(notifications)
+  useEffect(() => { bookingsRef.current      = bookings      }, [bookings])
+  useEffect(() => { notificationsRef.current = notifications }, [notifications])
 
   // Firebase Auth listener
   useEffect(() => {
@@ -272,6 +274,14 @@ export default function App() {
     }
     await batch.commit()
 
+    // Auto-dismiss the priority_request notification for this booking
+    const prNotif = notificationsRef.current.find(n =>
+      n.type === 'priority_request' && n.bookingId === booking.id && !n.read
+    )
+    if (prNotif?.id) {
+      await updateDoc(doc(db, 'notifications', prNotif.id), { read: true })
+    }
+
     await logHistory({
       bookingId:        booking.id,
       bookingTitle:     booking.title,
@@ -343,6 +353,14 @@ export default function App() {
       })
     }
     await batch.commit()
+
+    // Auto-dismiss the priority_request notification for this booking
+    const prNotif = notificationsRef.current.find(n =>
+      n.type === 'priority_request' && n.bookingId === booking.id && !n.read
+    )
+    if (prNotif?.id) {
+      await updateDoc(doc(db, 'notifications', prNotif.id), { read: true })
+    }
 
     await logHistory({
       bookingId:        booking.id,

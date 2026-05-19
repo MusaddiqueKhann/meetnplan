@@ -38,9 +38,13 @@ service cloud.firestore {
       allow update: if isAuthenticated() && (
         resource.data.ownerEmail == request.auth.token.email ||
         isAdmin() ||
+        // Restoring a waiting_for_action booking to approved (conflict resolved or client withdrew)
         (resource.data.status == 'waiting_for_action' &&
          request.resource.data.status == 'approved' &&
-         request.resource.data.priorityRequestId == null)
+         request.resource.data.priorityRequestId == null) ||
+        // Approving a priority_pending booking when its last conflict is resolved
+        (resource.data.status == 'priority_pending' &&
+         request.resource.data.status == 'approved')
       );
     }
 

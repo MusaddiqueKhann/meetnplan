@@ -361,7 +361,7 @@ export default function Profile({
 
   const myHistory = meetingHistory
     .filter(h => h.performedByEmail === user.email)
-    .slice(0, 30)
+    .slice(0, 10)
 
   const unreadNotifs = notifications.filter(n => !n.read)
 
@@ -694,7 +694,7 @@ export default function Profile({
             <History size={15} className="text-neutral-400" />
             <h2 className="text-[13px] font-bold text-black">Meeting History</h2>
             <span className="ml-auto text-[11px] font-semibold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">
-              {myHistory.length}
+              {myHistory.length} / 10
             </span>
           </div>
           <div className="divide-y divide-neutral-100">
