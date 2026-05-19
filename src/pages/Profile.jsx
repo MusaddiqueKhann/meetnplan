@@ -144,48 +144,78 @@ function DeleteWithReasonInline({ booking, onDelete, onCancel }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-3 bg-red-50 border border-red-200 rounded-xl p-4 flex flex-col gap-3">
-      <p className="text-[12px] font-bold text-red-800">Delete this meeting and free the slot</p>
-      <p className="text-[11px] text-red-700">The client meeting waiting for this slot will be automatically approved.</p>
-      <div className="flex flex-col gap-1.5">
-        <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide">Reason (required)</label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {DELETE_REASONS.map(r => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => { setReason(r); setError('') }}
-              className={`px-3 py-2 rounded-xl text-left text-[12px] font-semibold border-2 transition-all
-                ${reason === r ? 'border-red-500 bg-red-100 text-red-800' : 'border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300'}`}
-            >
-              {r}
-            </button>
-          ))}
+    <form onSubmit={handleSubmit} className="mt-3 bg-red-50 border border-red-100 rounded-2xl overflow-hidden">
+
+      {/* Header */}
+      <div className="flex items-start gap-3 px-4 sm:px-5 py-4 bg-red-100/70 border-b border-red-100">
+        <div className="w-8 h-8 bg-red-500 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+          <Trash2 size={14} className="text-white" />
         </div>
-        {reason === 'Other' && (
-          <input
-            type="text"
-            placeholder="Describe the reason..."
-            value={customReason}
-            onChange={e => { setCustomReason(e.target.value); setError('') }}
-            className={inputCls}
-            required
-          />
-        )}
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-red-900 leading-snug">Delete this meeting and free the slot</p>
+          <p className="text-xs text-red-600 mt-0.5 leading-snug">The client meeting waiting for this slot will be automatically approved.</p>
+        </div>
       </div>
-      {error && <p className="text-[11px] text-red-600 font-medium">{error}</p>}
-      <div className="flex items-center gap-2">
-        <button
-          type="submit"
-          disabled={saving}
-          className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white text-[12px] font-bold rounded-xl hover:bg-red-600 transition-colors disabled:opacity-60"
-        >
-          {saving ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-          Delete My Meeting
-        </button>
-        <button type="button" onClick={onCancel} className="px-4 py-2 text-[12px] font-semibold text-neutral-500 hover:text-black transition-colors">
-          Cancel
-        </button>
+
+      {/* Body */}
+      <div className="px-4 sm:px-5 py-4 flex flex-col gap-4">
+
+        {/* Reason picker */}
+        <div className="flex flex-col gap-2">
+          <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Reason (required)</label>
+          <div className="flex flex-wrap gap-2">
+            {DELETE_REASONS.map(r => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => { setReason(r); setError('') }}
+                className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap
+                  ${reason === r
+                    ? 'border-red-500 bg-red-500 text-white shadow-sm'
+                    : 'border-neutral-200 bg-white text-neutral-600 hover:border-red-300 hover:text-red-700 hover:bg-red-50'}`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+          {reason === 'Other' && (
+            <input
+              type="text"
+              placeholder="Describe the reason..."
+              value={customReason}
+              onChange={e => { setCustomReason(e.target.value); setError('') }}
+              className={inputCls}
+              required
+            />
+          )}
+        </div>
+
+        {error && (
+          <p className="text-xs text-red-600 font-medium flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
+            {error}
+          </p>
+        )}
+
+        {/* Actions */}
+        <div className="flex items-center gap-2">
+          <button
+            type="submit"
+            disabled={saving}
+            className="flex items-center gap-2 px-5 py-2.5 bg-red-500 text-white text-xs font-bold rounded-xl hover:bg-red-600 active:scale-95 transition-all disabled:opacity-60 shadow-sm"
+          >
+            {saving ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+            Delete My Meeting
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-2.5 text-xs font-semibold text-neutral-500 hover:text-black hover:bg-neutral-100 rounded-xl transition-all"
+          >
+            Cancel
+          </button>
+        </div>
+
       </div>
     </form>
   )
