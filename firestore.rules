@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // User profiles — keyed by Firebase Auth UID
+    match /users/{userId} {
+      allow read:   if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow delete: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+    }
+
+    // Rooms — anyone can read, only admins can write
+    match /rooms/{roomId} {
+      allow read:  if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Bookings — anyone authenticated can read and create.
+    // Delete allowed for owner (by email) or admin.
+    // Any authenticated user can also delete (covers auto-cleanup of stale bookings).
+    match /bookings/{bookingId} {
+      allow read:   if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow delete: if isAuthenticated() && (
+        resource.data.ownerEmail == request.auth.token.email || isAdmin()
+      );
+      allow update: if isAdmin();
+    }
+
+    // Settings — publicly readable (companies list needed on signup before auth), admin-only write
+    match /settings/{settingId} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+  }
+}

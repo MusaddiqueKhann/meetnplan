@@ -1,0 +1,42 @@
+Options -MultiViews
+RewriteEngine On
+
+# Send all requests to index.html (React SPA)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [QSA,L]
+
+# ── Security headers ──────────────────────────────────────────────────────
+<IfModule mod_headers.c>
+  # Prevent clickjacking
+  Header always set X-Frame-Options "SAMEORIGIN"
+  # Stop MIME sniffing
+  Header always set X-Content-Type-Options "nosniff"
+  # Basic XSS protection
+  Header always set X-XSS-Protection "1; mode=block"
+  # Only send referrer on same origin
+  Header always set Referrer-Policy "same-origin"
+</IfModule>
+
+# ── Cache static assets ───────────────────────────────────────────────────
+<IfModule mod_expires.c>
+  ExpiresActive On
+  # Hashed JS/CSS chunks — cache for 1 year (Vite adds content hash to filenames)
+  <FilesMatch "\.(js|css)$">
+    ExpiresDefault "access plus 1 year"
+  </FilesMatch>
+  # Images and fonts
+  <FilesMatch "\.(ico|svg|png|jpg|jpeg|webp|woff2|woff|ttf)$">
+    ExpiresDefault "access plus 1 month"
+  </FilesMatch>
+  # HTML — always revalidate so new deploys are picked up immediately
+  <FilesMatch "\.html$">
+    ExpiresDefault "access plus 0 seconds"
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
+# ── Compression ───────────────────────────────────────────────────────────
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json image/svg+xml
+</IfModule>
