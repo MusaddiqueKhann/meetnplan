@@ -150,43 +150,70 @@ export default function Dashboard({
 
       {/* Urgent notifications banner */}
       {urgentNotifs.length > 0 && (
-        <div className="bg-amber-50 border border-amber-300 rounded-2xl px-5 py-4 flex items-start gap-4">
-          <div className="w-9 h-9 bg-amber-500 rounded-xl flex items-center justify-center flex-shrink-0">
-            <AlertCircle size={17} className="text-white" />
+        <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4 sm:p-5">
+          <div className="flex items-start gap-3">
+            {/* Icon */}
+            <div className="w-8 h-8 bg-amber-500 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+              <AlertCircle size={15} className="text-white" />
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-[13px] font-bold text-amber-900 leading-snug">
+                  Action Required —{' '}
+                  <span className="font-extrabold">
+                    {urgentNotifs.length > 1
+                      ? `${urgentNotifs.length} Priority Conflicts`
+                      : 'Priority Request'}
+                  </span>
+                </p>
+                {/* Buttons: desktop/tablet inline */}
+                <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => onNavigate?.('profile')}
+                    className="px-3 py-1.5 bg-amber-500 text-white text-[11px] font-bold rounded-xl hover:bg-amber-600 transition-colors whitespace-nowrap"
+                  >
+                    View Actions
+                  </button>
+                  <button
+                    onClick={() => urgentNotifs.forEach(n => markNotificationRead?.(n.id))}
+                    className="px-3 py-1.5 bg-white border border-amber-300 text-amber-700 text-[11px] font-semibold rounded-xl hover:bg-amber-50 transition-colors whitespace-nowrap"
+                  >
+                    {urgentNotifs.length > 1 ? 'Dismiss All' : 'Dismiss'}
+                  </button>
+                </div>
+              </div>
+
+              {urgentNotifs.length > 1 ? (
+                <p className="text-[12px] text-amber-700 mt-1 leading-relaxed">
+                  {urgentNotifs.length} of your meetings conflict with high-priority client bookings.
+                  Go to your profile to reschedule or cancel each affected meeting.
+                </p>
+              ) : (
+                <>
+                  <p className="text-[12px] text-amber-700 mt-1 leading-relaxed">{urgentNotifs[0].message}</p>
+                  {urgentNotifs[0].room && (
+                    <p className="text-[11px] text-amber-600 mt-1.5 font-medium">
+                      {urgentNotifs[0].room} · {urgentNotifs[0].date} · {minsToAmPm(urgentNotifs[0].startMinutes ?? 0)}–{minsToAmPm(urgentNotifs[0].endMinutes ?? 0)}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-bold text-amber-900">
-              Action Required —{' '}
-              {urgentNotifs.length > 1
-                ? `${urgentNotifs.length} Priority Conflicts`
-                : 'Client Meeting Priority Request'}
-            </p>
-            {urgentNotifs.length > 1 ? (
-              <p className="text-[12px] text-amber-700 mt-0.5">
-                {urgentNotifs.length} of your meetings conflict with high-priority client bookings.
-                Please reschedule or cancel each affected meeting from your profile.
-              </p>
-            ) : (
-              <>
-                <p className="text-[12px] text-amber-700 mt-0.5">{urgentNotifs[0].message}</p>
-                {urgentNotifs[0].room && (
-                  <p className="text-[11px] text-amber-600 mt-1 font-medium">
-                    Room: {urgentNotifs[0].room} · {urgentNotifs[0].date} · {minsToAmPm(urgentNotifs[0].startMinutes ?? 0)}–{minsToAmPm(urgentNotifs[0].endMinutes ?? 0)}
-                  </p>
-                )}
-              </>
-            )}
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+
+          {/* Buttons: mobile only, below content */}
+          <div className="flex sm:hidden items-center gap-2 mt-3 ml-11">
             <button
               onClick={() => onNavigate?.('profile')}
-              className="px-3 py-1.5 bg-amber-500 text-white text-[11px] font-bold rounded-xl hover:bg-amber-600 transition-colors"
+              className="flex-1 py-2 bg-amber-500 text-white text-[12px] font-bold rounded-xl hover:bg-amber-600 transition-colors text-center"
             >
               View Actions
             </button>
             <button
               onClick={() => urgentNotifs.forEach(n => markNotificationRead?.(n.id))}
-              className="px-3 py-1.5 bg-white border border-amber-300 text-amber-700 text-[11px] font-semibold rounded-xl hover:bg-amber-50 transition-colors"
+              className="px-4 py-2 bg-white border border-amber-300 text-amber-700 text-[12px] font-semibold rounded-xl hover:bg-amber-50 transition-colors whitespace-nowrap"
             >
               {urgentNotifs.length > 1 ? 'Dismiss All' : 'Dismiss'}
             </button>
