@@ -52,17 +52,19 @@ export default function TodaysMeetings({ onOpenModal, bookings = [], deleteBooki
     b.status === 'waiting_for_action' || b.status === 'priority_pending'
 
   const mapBooking = b => ({
-    id:          b.id,
-    title:       b.title,
-    room:        b.room,
-    ownerEmail:  b.ownerEmail ?? '',
-    organizer:   b.coordinator || b.companyName || '—',
-    coordinator: b.coordinator || '—',
-    company:     b.companyName || '—',
-    startH:      Math.floor(b.startMinutes / 60),
-    startM:      b.startMinutes % 60,
-    endH:        Math.floor(b.endMinutes / 60),
-    endM:        b.endMinutes % 60,
+    id:               b.id,
+    title:            b.title,
+    room:             b.room,
+    ownerEmail:       b.ownerEmail ?? '',
+    organizer:        b.coordinator || b.companyName || '—',
+    coordinator:      b.coordinator || '—',
+    company:          b.companyName || '—',
+    startH:           Math.floor(b.startMinutes / 60),
+    startM:           b.startMinutes % 60,
+    endH:             Math.floor(b.endMinutes / 60),
+    endM:             b.endMinutes % 60,
+    status:           b.status,
+    priorityRequestId: b.priorityRequestId,
   })
 
   const todayBookings = bookings.filter(b => b.date === todayStr && isActive(b)).map(mapBooking)
@@ -70,11 +72,11 @@ export default function TodaysMeetings({ onOpenModal, bookings = [], deleteBooki
   const meetings = todayBookings
     .filter(b => b.room === selectedRoom)
     .sort((a, b) => (a.startH * 60 + a.startM) - (b.startH * 60 + b.startM))
-    .map(m => ({ ...m, status: getMeetingStatus(m, nowMinutes) }))
+    .map(m => ({ ...m, timeStatus: getMeetingStatus(m, nowMinutes) }))
 
-  const liveCount     = meetings.filter(m => m.status === 'live').length
-  const upcomingCount = meetings.filter(m => m.status === 'upcoming').length
-  const pastCount     = meetings.filter(m => m.status === 'past').length
+  const liveCount     = meetings.filter(m => m.timeStatus === 'live').length
+  const upcomingCount = meetings.filter(m => m.timeStatus === 'upcoming').length
+  const pastCount     = meetings.filter(m => m.timeStatus === 'past').length
 
   const tomorrowMeetings = bookings
     .filter(b => b.date === tomorrowStr && b.room === selectedRoom && isActive(b))
@@ -87,7 +89,7 @@ export default function TodaysMeetings({ onOpenModal, bookings = [], deleteBooki
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   })
 
-  const firstNonPastIdx = meetings.findIndex(m => m.status !== 'past')
+  const firstNonPastIdx = meetings.findIndex(m => m.timeStatus !== 'past')
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -198,9 +200,9 @@ export default function TodaysMeetings({ onOpenModal, bookings = [], deleteBooki
               ) : (
                 <div className="flex flex-col gap-2">
                   {meetings.map((meeting, idx) => {
-                    const isLive      = meeting.status === 'live'
-                    const isPast      = meeting.status === 'past'
-                    const isUpcoming  = meeting.status === 'upcoming'
+                    const isLive      = meeting.timeStatus === 'live'
+                    const isPast      = meeting.timeStatus === 'past'
+                    const isUpcoming  = meeting.timeStatus === 'upcoming'
                     const startMin    = meeting.startH * 60 + meeting.startM
                     const endMin      = meeting.endH   * 60 + meeting.endM
                     const durationMin = endMin - startMin
@@ -315,6 +317,10 @@ export default function TodaysMeetings({ onOpenModal, bookings = [], deleteBooki
                               <div className={`flex-1 min-w-0 rounded-xl overflow-hidden transition-all duration-150
                                 ${isPast
                                   ? 'bg-[#F7F7F7] border border-[#E8E8E8] shadow-[inset_3px_0_0_#E0E0E0]'
+                                  : meeting.status === 'waiting_for_action'
+                                  ? 'bg-amber-50 border border-amber-200 shadow-[inset_3px_0_0_theme(colors.amber.400)]'
+                                  : meeting.status === 'priority_pending'
+                                  ? 'bg-orange-50 border border-orange-200 shadow-[inset_3px_0_0_theme(colors.orange.400)]'
                                   : 'bg-white border border-[#E5E5E5] hover:border-neutral-300 hover:shadow-sm shadow-[inset_3px_0_0_#DCDCF0]'
                                 }`}
                               >
@@ -326,7 +332,17 @@ export default function TodaysMeetings({ onOpenModal, bookings = [], deleteBooki
                                         <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#AAA]">Ended</span>
                                       </span>
                                     )}
-                                    {isUpcoming && (
+                                    {!isPast && meeting.status === 'waiting_for_action' && (
+                                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-100 border border-amber-200 flex-shrink-0">
+                                        <span className="text-[9px] font-extrabold uppercase tracking-widest text-amber-700">Action Needed</span>
+                                      </span>
+                                    )}
+                                    {!isPast && meeting.status === 'priority_pending' && (
+                                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-orange-100 border border-orange-200 flex-shrink-0">
+                                        <span className="text-[9px] font-extrabold uppercase tracking-widest text-orange-600">Pending Approval</span>
+                                      </span>
+                                    )}
+                                    {isUpcoming && meeting.status !== 'waiting_for_action' && meeting.status !== 'priority_pending' && (
                                       <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-50 flex-shrink-0">
                                         <span className="text-[9px] font-extrabold uppercase tracking-widest text-indigo-400">Up Next</span>
                                       </span>

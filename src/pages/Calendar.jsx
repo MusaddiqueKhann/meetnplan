@@ -80,7 +80,7 @@ function EventDetailModal({ event, onClose, onDelete, canDelete }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div className="relative w-full max-w-sm bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className={`px-6 pt-6 pb-5 ${event.live ? 'bg-black' : 'bg-[#F9F9F9]'}`}>
+        <div className={`px-6 pt-6 pb-5 ${event.live ? 'bg-black' : event.status === 'waiting_for_action' ? 'bg-amber-50' : event.status === 'priority_pending' ? 'bg-orange-50' : 'bg-[#F9F9F9]'}`}>
           <div className="flex items-start justify-between gap-3">
             <div>
               {event.live && (
@@ -90,6 +90,16 @@ function EventDetailModal({ event, onClose, onDelete, canDelete }) {
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
                   </span>
                   <span className="text-[10px] font-bold text-white/70 uppercase tracking-widest">Live Now</span>
+                </div>
+              )}
+              {event.status === 'waiting_for_action' && (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100 border border-amber-200 mb-2">
+                  <span className="text-[9px] font-extrabold uppercase tracking-widest text-amber-700">Action Needed</span>
+                </div>
+              )}
+              {event.status === 'priority_pending' && (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-100 border border-orange-200 mb-2">
+                  <span className="text-[9px] font-extrabold uppercase tracking-widest text-orange-600">Pending Approval</span>
                 </div>
               )}
               <h2 className={`text-lg font-extrabold leading-snug ${event.live ? 'text-white' : 'text-black'}`}>{event.title}</h2>
@@ -183,7 +193,9 @@ export default function Calendar({ onOpenModal, rooms = [], bookings = [], delet
     if (view === 'Day'  && dayScrollRef.current)  dayScrollRef.current.scrollTop  = scrollTarget
   }, [view])
 
-  const isActive = (b) => !b.status || b.status === 'approved' || b.status === 'rescheduled'
+  const isActive = (b) =>
+    !b.status || b.status === 'approved' || b.status === 'rescheduled' ||
+    b.status === 'waiting_for_action' || b.status === 'priority_pending'
 
   const bookingEvents = bookings
     .filter(isActive)
@@ -198,6 +210,7 @@ export default function Calendar({ onOpenModal, rooms = [], bookings = [], delet
         title: b.title, room: b.room,
         coordinator: b.coordinator || b.companyName || '',
         live: isLive,
+        status: b.status,
       }
     })
     .sort((a, b) => a.startMinutes - b.startMinutes)
@@ -355,16 +368,22 @@ export default function Calendar({ onOpenModal, rooms = [], bookings = [], delet
                               const heightPx = Math.max(18, Math.round((ev.endMinutes - ev.startMinutes) / 60 * HOUR_HEIGHT) - 4)
                               const md = heightPx >= 90
                               const lg = heightPx >= 160
+                              const isWaiting    = ev.status === 'waiting_for_action'
+                              const isPriPending = ev.status === 'priority_pending'
                               return (
                               <div key={ei}
                                 onClick={e => { e.stopPropagation(); setSelectedEvent(ev) }}
                                 className={`absolute inset-x-1 rounded-lg cursor-pointer transition-all overflow-hidden flex
                                   ${ev.live
                                     ? 'bg-black text-white shadow-lg'
+                                    : isWaiting
+                                    ? 'bg-amber-50 text-black border border-amber-300 hover:border-amber-500 hover:shadow-md'
+                                    : isPriPending
+                                    ? 'bg-orange-50 text-black border border-orange-300 hover:border-orange-500 hover:shadow-md'
                                     : 'bg-white text-black border border-[#E0E0E0] hover:border-black hover:shadow-md'}`}
                                 style={{ top: minuteOffset + 2, height: heightPx, zIndex: 10 }}
                               >
-                                {!ev.live && <div className="w-[3px] flex-shrink-0 bg-black self-stretch rounded-l-md" />}
+                                {!ev.live && <div className={`w-[3px] flex-shrink-0 self-stretch rounded-l-md ${isWaiting ? 'bg-amber-400' : isPriPending ? 'bg-orange-400' : 'bg-black'}`} />}
                                 <div className={`flex flex-col flex-1 min-w-0 justify-between
                                   ${heightPx < 40 ? 'px-1.5 py-0.5' : lg ? 'px-2 py-2' : 'px-1.5 py-1.5'}`}>
                                   <div className="min-w-0">
@@ -377,13 +396,18 @@ export default function Calendar({ onOpenModal, rooms = [], bookings = [], delet
                                         <span className="text-[7px] font-bold uppercase tracking-widest text-white/50">Live</span>
                                       </div>
                                     )}
+                                    {(isWaiting || isPriPending) && heightPx >= 32 && (
+                                      <div className={`text-[7px] font-bold uppercase tracking-widest mb-0.5 ${isWaiting ? 'text-amber-600' : 'text-orange-500'}`}>
+                                        {isWaiting ? 'Action Needed' : 'Pending Approval'}
+                                      </div>
+                                    )}
                                     <p className={`font-extrabold leading-snug
                                       ${lg ? 'text-[11px] line-clamp-3' : md ? 'text-[10px] line-clamp-2' : 'text-[10px] truncate'}`}>
                                       {ev.title}
                                     </p>
                                     {heightPx >= 38 && (
                                       <div className={`flex items-center gap-0.5 mt-0.5 min-w-0 font-semibold
-                                        ${md ? 'text-[9px]' : 'text-[8px]'} ${ev.live ? 'text-white/55' : 'text-[#777]'}`}>
+                                        ${md ? 'text-[9px]' : 'text-[8px]'} ${ev.live ? 'text-white/55' : isWaiting ? 'text-amber-700' : isPriPending ? 'text-orange-700' : 'text-[#777]'}`}>
                                         <MapPin size={7} className="flex-shrink-0" />
                                         <span className="truncate">{ev.room}</span>
                                       </div>
@@ -456,7 +480,7 @@ export default function Calendar({ onOpenModal, rooms = [], bookings = [], delet
                           {allEvs.slice(0, 3).map((ev, ei) => (
                             <span key={ei}
                               className={`w-1.5 h-1.5 rounded-full flex-shrink-0
-                                ${ev.live ? 'bg-black' : 'bg-[#AAAAAA]'}`}
+                                ${ev.live ? 'bg-black' : ev.status === 'waiting_for_action' ? 'bg-amber-400' : ev.status === 'priority_pending' ? 'bg-orange-400' : 'bg-[#AAAAAA]'}`}
                             />
                           ))}
                           {allEvs.length > 3 && (
@@ -482,7 +506,13 @@ export default function Calendar({ onOpenModal, rooms = [], bookings = [], delet
                           <div key={ei}
                             onClick={e => { e.stopPropagation(); setSelectedEvent(ev) }}
                             className={`text-[9px] px-1.5 py-0.5 rounded-md font-semibold truncate cursor-pointer transition-colors
-                              ${ev.live ? 'bg-black text-white' : 'bg-[#F0F0F0] text-black hover:bg-[#E5E5E5]'}`}>
+                              ${ev.live
+                                ? 'bg-black text-white'
+                                : ev.status === 'waiting_for_action'
+                                ? 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                                : ev.status === 'priority_pending'
+                                ? 'bg-orange-100 text-orange-800 hover:bg-orange-200'
+                                : 'bg-[#F0F0F0] text-black hover:bg-[#E5E5E5]'}`}>
                             {ev.live && <span className="inline-block w-1 h-1 bg-green-400 rounded-full mr-0.5 mb-px" />}
                             {ev.title}
                           </div>
@@ -560,16 +590,22 @@ export default function Calendar({ onOpenModal, rooms = [], bookings = [], delet
                         const md = heightPx >= 90
                         const lg = heightPx >= 160
                         const xl = heightPx >= 280
+                        const isWaiting    = ev.status === 'waiting_for_action'
+                        const isPriPending = ev.status === 'priority_pending'
                         return (
                           <div key={ei}
                             onClick={() => setSelectedEvent(ev)}
                             className={`absolute left-1.5 right-1.5 rounded-xl cursor-pointer transition-all overflow-hidden flex
                               ${ev.live
                                 ? 'bg-black text-white shadow-lg'
+                                : isWaiting
+                                ? 'bg-amber-50 text-black border border-amber-300 hover:border-amber-500 hover:shadow-md'
+                                : isPriPending
+                                ? 'bg-orange-50 text-black border border-orange-300 hover:border-orange-500 hover:shadow-md'
                                 : 'bg-white text-black border border-[#E0E0E0] hover:border-black hover:shadow-md'}`}
                             style={{ top: minuteOffset + 2, height: heightPx, zIndex: 10 }}
                           >
-                            {!ev.live && <div className="w-1 flex-shrink-0 bg-black self-stretch rounded-l-xl" />}
+                            {!ev.live && <div className={`w-1 flex-shrink-0 self-stretch rounded-l-xl ${isWaiting ? 'bg-amber-400' : isPriPending ? 'bg-orange-400' : 'bg-black'}`} />}
                             <div className={`flex flex-col flex-1 min-w-0 justify-between
                               ${heightPx < 44 ? 'px-2.5 py-1' : lg ? 'px-4 py-3' : 'px-3 py-2'}`}>
                               <div className="min-w-0">
@@ -582,13 +618,18 @@ export default function Calendar({ onOpenModal, rooms = [], bookings = [], delet
                                     <span className={`font-bold uppercase tracking-widest text-white/50 ${lg ? 'text-[10px]' : 'text-[8px]'}`}>Live Now</span>
                                   </div>
                                 )}
+                                {(isWaiting || isPriPending) && heightPx >= 36 && (
+                                  <div className={`font-bold uppercase tracking-widest mb-1 ${lg ? 'text-[10px]' : 'text-[8px]'} ${isWaiting ? 'text-amber-600' : 'text-orange-500'}`}>
+                                    {isWaiting ? 'Action Needed' : 'Pending Approval'}
+                                  </div>
+                                )}
                                 <p className={`font-extrabold leading-snug
                                   ${lg ? 'text-[15px] line-clamp-3' : md ? 'text-sm line-clamp-2' : 'text-xs truncate'}`}>
                                   {ev.title}
                                 </p>
                                 {heightPx >= 44 && (
                                   <div className={`flex items-center gap-1 mt-1 min-w-0 font-semibold
-                                    ${lg ? 'text-[11px]' : 'text-[10px]'} ${ev.live ? 'text-white/60' : 'text-[#666]'}`}>
+                                    ${lg ? 'text-[11px]' : 'text-[10px]'} ${ev.live ? 'text-white/60' : isWaiting ? 'text-amber-700' : isPriPending ? 'text-orange-700' : 'text-[#666]'}`}>
                                     <Clock size={9} className="flex-shrink-0" />
                                     <span className="truncate">{minsToAmPm(ev.startMinutes)} – {minsToAmPm(ev.endMinutes)}</span>
                                   </div>
