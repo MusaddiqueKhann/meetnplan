@@ -116,7 +116,6 @@ export default function RescheduleInline({ booking, bookings, rooms, settings, o
               required
               minHour={effectiveMinHour}
               maxHour={effectiveMaxHour}
-              dropUp
             />
           </div>
         </div>
