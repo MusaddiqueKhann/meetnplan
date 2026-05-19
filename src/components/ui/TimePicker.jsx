@@ -20,7 +20,7 @@ function parse(v) {
   return { h, m: mRaw, period }
 }
 
-export default function TimePicker({ value, onChange, required, minHour = 0, maxHour = 24, dropUp = false }) {
+export default function TimePicker({ value, onChange, required, minHour = 0, maxHour = 24, dropUp = false, triggerClass }) {
   const { period: initP } = parse(value)
   const [open,   setOpen]   = useState(false)
   const [period, setPeriod] = useState(initP || 'AM')
@@ -173,13 +173,15 @@ export default function TimePicker({ value, onChange, required, minHour = 0, max
       <button
         type="button"
         onClick={toggle}
-        className={`w-full px-3 py-2 rounded-xl text-[12px] flex items-center justify-between transition-all cursor-pointer outline-none border
-          ${open ? 'bg-white border-black shadow-sm' : 'bg-[#F8F8F8] border-transparent hover:bg-[#F0F0F0]'}`}
+        className={triggerClass
+          ? `${triggerClass} ${open ? '!border-black !bg-white' : ''}`
+          : `w-full px-3 py-2 rounded-xl text-[12px] flex items-center justify-between transition-all cursor-pointer outline-none border ${open ? 'bg-white border-black shadow-sm' : 'bg-[#F8F8F8] border-transparent hover:bg-[#F0F0F0]'}`
+        }
       >
-        <span className={`text-[12px] font-medium ${display ? 'text-black' : 'text-[#BBBBBB]'}`}>
+        <span className={`font-medium ${display ? 'text-black' : 'text-[#BBBBBB]'}`}>
           {display || 'Select time'}
         </span>
-        <Clock size={12} className={open ? 'text-black' : 'text-[#C8C8C8]'} />
+        <Clock size={triggerClass ? 14 : 12} className={open ? 'text-black' : 'text-[#C8C8C8]'} />
       </button>
 
       {open && createPortal(dropdown, document.body)}

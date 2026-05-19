@@ -321,11 +321,13 @@ export default function ScheduleMeetingModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <label className={labelClass}><CalendarDays size={11} /> Date</label>
-              <DatePicker value={form.date} onChange={set('date')} required minDate={todayStr()} maxDate={maxDateStr()} offDays={offDays} />
+              <DatePicker value={form.date} onChange={set('date')} required minDate={todayStr()} maxDate={maxDateStr()} offDays={offDays}
+                triggerClass={inputClass} />
             </div>
             <div className="flex flex-col gap-1.5">
               <label className={labelClass}><Clock size={11} /> Time</label>
-              <TimePicker value={form.time} onChange={set('time')} required minHour={effectiveMinHour} maxHour={workEndHour} />
+              <TimePicker value={form.time} onChange={set('time')} required minHour={effectiveMinHour} maxHour={workEndHour}
+                triggerClass={inputClass} />
             </div>
           </div>
 

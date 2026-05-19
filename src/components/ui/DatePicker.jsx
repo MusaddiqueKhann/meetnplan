@@ -10,7 +10,7 @@ function localStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-export default function DatePicker({ value, onChange, required, minDate, maxDate, offDays = [5, 6] }) {
+export default function DatePicker({ value, onChange, required, minDate, maxDate, offDays = [5, 6], triggerClass }) {
   const today = new Date()
   const [open, setOpen] = useState(false)
   const [view, setView] = useState(() => {
@@ -186,13 +186,15 @@ export default function DatePicker({ value, onChange, required, minDate, maxDate
       <button
         type="button"
         onClick={toggle}
-        className={`w-full px-3 py-2 rounded-xl text-[12px] flex items-center justify-between transition-all cursor-pointer outline-none border
-          ${open ? 'bg-white border-black shadow-sm' : 'bg-[#F8F8F8] border-transparent hover:bg-[#F0F0F0]'}`}
+        className={triggerClass
+          ? `${triggerClass} ${open ? '!border-black !bg-white' : ''}`
+          : `w-full px-3 py-2 rounded-xl text-[12px] flex items-center justify-between transition-all cursor-pointer outline-none border ${open ? 'bg-white border-black shadow-sm' : 'bg-[#F8F8F8] border-transparent hover:bg-[#F0F0F0]'}`
+        }
       >
-        <span className={`text-[12px] font-medium ${display ? 'text-black' : 'text-[#BBBBBB]'}`}>
+        <span className={`font-medium ${display ? 'text-black' : 'text-[#BBBBBB]'}`}>
           {display || 'Select date'}
         </span>
-        <CalendarDays size={12} className={open ? 'text-black' : 'text-[#C8C8C8]'} />
+        <CalendarDays size={triggerClass ? 14 : 12} className={open ? 'text-black' : 'text-[#C8C8C8]'} />
       </button>
 
       {open && createPortal(dropdown, document.body)}
