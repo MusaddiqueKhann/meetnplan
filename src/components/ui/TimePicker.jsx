@@ -19,7 +19,7 @@ function parse(v) {
   return { h, m: mRaw, period }
 }
 
-export default function TimePicker({ value, onChange, required, minHour = 0, maxHour = 24 }) {
+export default function TimePicker({ value, onChange, required, minHour = 0, maxHour = 24, dropUp = false }) {
   const { period: initP } = parse(value)
   const [open,   setOpen]   = useState(false)
   const [period, setPeriod] = useState(initP || 'AM')
@@ -93,7 +93,7 @@ export default function TimePicker({ value, onChange, required, minHour = 0, max
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute top-[calc(100%+8px)] left-0 z-[200] w-full bg-white rounded-2xl border border-[#E5E5E5] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.14)] overflow-hidden">
+        <div className={`absolute left-0 z-[200] w-full bg-white rounded-2xl border border-[#E5E5E5] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.14)] overflow-hidden ${dropUp ? 'bottom-[calc(100%+8px)]' : 'top-[calc(100%+8px)]'}`}>
 
           {/* Preview */}
           <div className="bg-black px-4 py-2.5 flex items-center justify-between">

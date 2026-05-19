@@ -160,25 +160,25 @@ function RescheduleInline({ booking, bookings, rooms, settings, onReschedule, on
     }
   }
 
-  const fieldCls = 'w-full px-4 py-3 bg-[#F9F9F9] border border-[#E5E5E5] rounded-2xl text-sm text-black outline-none focus:border-black focus:bg-white transition-colors cursor-pointer flex items-center justify-between'
-  const labelCls = 'flex items-center gap-1.5 text-[11px] font-bold text-black uppercase tracking-wide'
+  const fieldCls = 'w-full px-3 py-2.5 bg-[#F9F9F9] border border-[#E5E5E5] rounded-xl text-[13px] text-black outline-none focus:border-black focus:bg-white transition-colors cursor-pointer flex items-center justify-between'
+  const labelCls = 'flex items-center gap-1 text-[10px] font-bold text-black uppercase tracking-wide mb-1'
 
   return (
     <form onSubmit={handleSubmit} className="mt-3 bg-white border border-[#E5E5E5] rounded-2xl overflow-hidden shadow-sm">
       {/* Header */}
-      <div className="px-4 sm:px-5 py-3 border-b border-[#F0F0F0] bg-[#FAFAFA] flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <RotateCcw size={13} className="text-black" />
-          <p className="text-[13px] font-bold text-black">Reschedule Meeting</p>
+      <div className="px-4 py-2.5 border-b border-[#F0F0F0] bg-[#FAFAFA] flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <RotateCcw size={12} className="text-black" />
+          <p className="text-[12px] font-bold text-black">Reschedule Meeting</p>
         </div>
-        <span className="text-[11px] text-neutral-400 font-medium bg-neutral-100 px-2 py-0.5 rounded-full">{durLabel} duration</span>
+        <span className="text-[10px] text-neutral-400 font-medium bg-neutral-100 px-2 py-0.5 rounded-full">{durLabel}</span>
       </div>
 
-      <div className="p-4 sm:p-5 flex flex-col gap-4">
-        {/* Date + Time */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1.5">
-            <label className={labelCls}><CalendarDays size={11} /> New Date</label>
+      <div className="p-3 flex flex-col gap-3">
+        {/* Date + Time — always side by side */}
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className={labelCls}><CalendarDays size={10} /> Date</label>
             <DatePicker
               value={date}
               onChange={e => { setDate(e.target.value); setError('') }}
@@ -188,47 +188,48 @@ function RescheduleInline({ booking, bookings, rooms, settings, onReschedule, on
               offDays={offDays}
             />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label className={labelCls}><Clock size={11} /> New Time</label>
+          <div>
+            <label className={labelCls}><Clock size={10} /> Time</label>
             <TimePicker
               value={time}
               onChange={e => { setTime(e.target.value); setError('') }}
               required
               minHour={effectiveMinHour}
               maxHour={effectiveMaxHour}
+              dropUp
             />
           </div>
         </div>
 
         {/* Room */}
-        <div className="flex flex-col gap-1.5" ref={roomRef}>
-          <label className={labelCls}><DoorOpen size={11} /> Room</label>
+        <div ref={roomRef}>
+          <label className={labelCls}><DoorOpen size={10} /> Room</label>
           <div className="relative">
             <button
               type="button"
               onClick={() => setRoomOpen(v => !v)}
               className={`${fieldCls} ${!room ? 'text-[#999]' : 'text-black'}`}
             >
-              <span className="text-sm font-medium">
+              <span className="text-[13px] font-medium truncate">
                 {room
                   ? `${room} · ${rooms.find(r => r.name === room)?.capacity ?? ''} seats`
                   : 'Select room'}
               </span>
-              <ChevronDown size={14} className={`flex-shrink-0 text-[#999] transition-transform duration-150 ${roomOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown size={13} className={`flex-shrink-0 text-[#999] transition-transform duration-150 ${roomOpen ? 'rotate-180' : ''}`} />
             </button>
             <input type="text" required readOnly value={room} onChange={() => {}} className="sr-only" tabIndex={-1} />
             {roomOpen && (
-              <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-[#E5E5E5] rounded-2xl shadow-lg z-[200] overflow-hidden">
+              <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-[#E5E5E5] rounded-xl shadow-lg z-[200] overflow-hidden">
                 {rooms.map(r => (
                   <button
                     key={r.id}
                     type="button"
                     onClick={() => { setRoom(r.name); setRoomOpen(false); setError('') }}
-                    className={`w-full flex items-center justify-between px-4 py-3 text-left hover:bg-[#F9F9F9] transition-colors ${room === r.name ? 'bg-[#F5F5F5]' : ''}`}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 text-left hover:bg-[#F9F9F9] transition-colors ${room === r.name ? 'bg-[#F5F5F5]' : ''}`}
                   >
-                    <span className={`text-[13px] font-semibold ${room === r.name ? 'text-black' : 'text-[#333]'}`}>{r.name}</span>
-                    <span className="flex items-center gap-1 text-[11px] text-[#999] font-medium">
-                      <Users size={11} /> {r.capacity} seats
+                    <span className={`text-[12px] font-semibold ${room === r.name ? 'text-black' : 'text-[#333]'}`}>{r.name}</span>
+                    <span className="flex items-center gap-1 text-[10px] text-[#999] font-medium flex-shrink-0">
+                      <Users size={10} /> {r.capacity} seats
                     </span>
                   </button>
                 ))}
@@ -239,27 +240,27 @@ function RescheduleInline({ booking, bookings, rooms, settings, onReschedule, on
 
         {/* Error */}
         {error && (
-          <div className="flex items-center gap-2 px-3 py-2.5 bg-red-50 border border-red-200 rounded-xl">
-            <AlertCircle size={12} className="text-red-500 flex-shrink-0" />
+          <div className="flex items-center gap-1.5 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
+            <AlertCircle size={11} className="text-red-500 flex-shrink-0" />
             <p className="text-[11px] text-red-600 font-semibold">{error}</p>
           </div>
         )}
 
         {/* Actions */}
-        <div className="flex items-center gap-2 pt-1">
+        <div className="flex items-center gap-2">
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-2 px-5 py-2.5 bg-black text-white text-[13px] font-semibold rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-60"
+            className="flex items-center gap-1.5 px-4 py-2 bg-black text-white text-[12px] font-semibold rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-60"
           >
-            {saving ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}
-            Confirm Reschedule
+            {saving ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
+            Confirm
           </button>
           <button
             type="button"
             onClick={onCancel}
             disabled={saving}
-            className="px-4 py-2.5 text-[13px] font-semibold text-neutral-500 hover:text-black transition-colors disabled:opacity-40"
+            className="px-4 py-2 text-[12px] font-semibold text-neutral-500 hover:text-black transition-colors disabled:opacity-40"
           >
             Cancel
           </button>

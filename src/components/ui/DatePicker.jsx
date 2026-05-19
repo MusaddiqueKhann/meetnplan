@@ -84,8 +84,7 @@ export default function DatePicker({ value, onChange, required, minDate, maxDate
       {/* Calendar dropdown */}
       {open && (
         <div
-          className={`absolute left-0 z-[200] bg-white rounded-2xl border border-[#EBEBEB] shadow-[0_8px_40px_-4px_rgba(0,0,0,0.14),0_2px_8px_rgba(0,0,0,0.06)] ${dropUp ? 'bottom-[calc(100%+8px)]' : 'top-[calc(100%+8px)]'}`}
-          style={{ width: '100%' }}
+          className={`absolute left-0 z-[200] w-full min-w-[260px] bg-white rounded-2xl border border-[#EBEBEB] shadow-[0_8px_40px_-4px_rgba(0,0,0,0.14),0_2px_8px_rgba(0,0,0,0.06)] ${dropUp ? 'bottom-[calc(100%+8px)]' : 'top-[calc(100%+8px)]'}`}
         >
           {/* Month header */}
           <div className="flex items-center justify-between px-3 pt-2.5 pb-1.5">
