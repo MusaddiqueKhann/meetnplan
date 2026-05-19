@@ -4,7 +4,7 @@ import { Clock } from 'lucide-react'
 
 const HOUR_GRID = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
 const MINUTES   = ['00', '15', '30', '45']
-const DROPDOWN_H = 215
+const DROPDOWN_H = 230
 
 function to24(h, period) {
   if (period === 'AM') return h === 12 ? 0 : h
@@ -47,12 +47,12 @@ export default function TimePicker({ value, onChange, required, minHour = 0, max
 
   useEffect(() => {
     if (!open) return
-    const onScroll = () => {
+    const onReflow = () => {
       if (triggerRef.current) setPos(calcPos(triggerRef.current.getBoundingClientRect()))
     }
-    window.addEventListener('scroll', onScroll, true)
-    window.addEventListener('resize', onScroll)
-    return () => { window.removeEventListener('scroll', onScroll, true); window.removeEventListener('resize', onScroll) }
+    window.addEventListener('scroll', onReflow, true)
+    window.addEventListener('resize', onReflow)
+    return () => { window.removeEventListener('scroll', onReflow, true); window.removeEventListener('resize', onReflow) }
   }, [open])
 
   useEffect(() => {
@@ -68,8 +68,7 @@ export default function TimePicker({ value, onChange, required, minHour = 0, max
   }
 
   const toggle = () => {
-    if (!open && triggerRef.current)
-      setPos(calcPos(triggerRef.current.getBoundingClientRect()))
+    if (!open && triggerRef.current) setPos(calcPos(triggerRef.current.getBoundingClientRect()))
     setOpen(o => !o)
   }
 
@@ -97,57 +96,72 @@ export default function TimePicker({ value, onChange, required, minHour = 0, max
     <div
       ref={dropdownRef}
       style={{ position: 'fixed', zIndex: 9999, ...pos }}
-      className="bg-white rounded-2xl border border-[#E5E5E5] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.18)] overflow-hidden"
+      className="bg-white rounded-2xl border border-[#E8E8E8] shadow-[0_12px_40px_-4px_rgba(0,0,0,0.18),0_4px_12px_rgba(0,0,0,0.06)] overflow-hidden"
     >
       {/* Preview bar */}
-      <div className="bg-black px-4 py-2.5 flex items-center justify-between">
-        <span className="text-lg font-black text-white tabular-nums tracking-tight">
-          {selH ? String(selH).padStart(2, '0') : '--'}
-          <span className="text-white/30 mx-0.5">:</span>
-          {selM ?? '--'}
-        </span>
-        <div className="flex gap-1">
-          {['AM', 'PM'].map(p => (
-            <button key={p} type="button" onClick={() => pickPeriod(p)}
-              disabled={p === 'AM' ? !amEnabled : !pmEnabled}
-              className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold transition-all
-                ${(p === 'AM' && !amEnabled) || (p === 'PM' && !pmEnabled)
-                  ? 'text-white/20 cursor-not-allowed'
-                  : period === p ? 'bg-white text-black' : 'text-white/50 hover:text-white'}`}>
-              {p}
-            </button>
-          ))}
+      <div className="bg-[#0A0A0A] px-4 pt-3.5 pb-3">
+        <div className="flex items-center justify-between">
+          {/* Time display */}
+          <div className="flex items-baseline gap-0.5">
+            <span className="text-[28px] font-black text-white tabular-nums leading-none tracking-tight">
+              {selH ? String(selH).padStart(2, '0') : '--'}
+            </span>
+            <span className="text-[22px] font-black text-white/25 leading-none mx-0.5">:</span>
+            <span className="text-[28px] font-black text-white tabular-nums leading-none tracking-tight">
+              {selM ?? '--'}
+            </span>
+          </div>
+          {/* AM / PM pill */}
+          <div className="flex bg-white/[0.08] rounded-xl p-0.5">
+            {['AM', 'PM'].map(p => {
+              const disabled = p === 'AM' ? !amEnabled : !pmEnabled
+              const active   = period === p
+              return (
+                <button key={p} type="button" onClick={() => pickPeriod(p)} disabled={disabled}
+                  className={`px-3 py-1 rounded-[10px] text-[11px] font-bold tracking-wide transition-all
+                    ${disabled  ? 'text-white/15 cursor-not-allowed'
+                    : active    ? 'bg-white text-black shadow-sm'
+                    :             'text-white/40 hover:text-white/70'}`}>
+                  {p}
+                </button>
+              )
+            })}
+          </div>
         </div>
       </div>
 
-      <div className="p-2 flex flex-col gap-2">
+      <div className="p-2.5 flex flex-col gap-2">
         {/* Hour grid */}
         <div>
-          <p className="text-[8px] font-bold text-neutral-300 uppercase tracking-widest mb-1">Hour</p>
+          <p className="text-[9px] font-extrabold text-neutral-300 uppercase tracking-[0.12em] mb-1.5 px-1">Hour</p>
           <div className="grid grid-cols-4 gap-1">
             {HOUR_GRID.map(h => {
               const allowed  = isHourAllowed(h)
               const selected = selH === h && selPeriod === period
               return (
                 <button key={h} type="button" onClick={() => pickHour(h)} disabled={!allowed}
-                  className={`py-1.5 rounded-lg text-xs font-semibold transition-all
-                    ${!allowed ? 'text-neutral-200 cursor-not-allowed'
-                      : selected ? 'bg-black text-white'
-                      : 'text-neutral-700 hover:bg-neutral-100'}`}>
+                  className={`py-2 rounded-xl text-[13px] font-semibold transition-all
+                    ${!allowed  ? 'text-neutral-200 cursor-not-allowed'
+                    : selected  ? 'bg-black text-white shadow-sm'
+                    :             'text-neutral-600 hover:bg-neutral-100 hover:text-black'}`}>
                   {String(h).padStart(2, '0')}
                 </button>
               )
             })}
           </div>
         </div>
+
+        {/* Divider */}
+        <div className="h-px bg-neutral-100 mx-1" />
+
         {/* Minute row */}
         <div>
-          <p className="text-[8px] font-bold text-neutral-300 uppercase tracking-widest mb-1">Minute</p>
+          <p className="text-[9px] font-extrabold text-neutral-300 uppercase tracking-[0.12em] mb-1.5 px-1">Minute</p>
           <div className="grid grid-cols-4 gap-1">
             {MINUTES.map(m => (
               <button key={m} type="button" onClick={() => pickMin(m)}
-                className={`py-1.5 rounded-lg text-xs font-semibold transition-all
-                  ${selM === m ? 'bg-black text-white' : 'text-neutral-700 hover:bg-neutral-100'}`}>
+                className={`py-2 rounded-xl text-[13px] font-semibold transition-all
+                  ${selM === m ? 'bg-black text-white shadow-sm' : 'text-neutral-600 hover:bg-neutral-100 hover:text-black'}`}>
                 :{m}
               </button>
             ))}
@@ -162,13 +176,13 @@ export default function TimePicker({ value, onChange, required, minHour = 0, max
       <button
         type="button"
         onClick={toggle}
-        className={`w-full px-4 py-3 rounded-2xl text-sm flex items-center justify-between transition-all cursor-pointer outline-none border
-          ${open ? 'bg-white border-black' : 'bg-[#F9F9F9] border-[#E5E5E5] hover:border-[#C8C8C8]'}`}
+        className={`w-full px-3.5 py-2.5 rounded-xl text-sm flex items-center justify-between transition-all cursor-pointer outline-none border
+          ${open ? 'bg-white border-black shadow-sm' : 'bg-[#F7F7F7] border-[#E8E8E8] hover:border-[#C8C8C8] hover:bg-white'}`}
       >
-        <span className={display ? 'text-black font-medium' : 'text-[#BBBBBB]'}>
+        <span className={`text-[13px] font-medium ${display ? 'text-black' : 'text-[#BABABA]'}`}>
           {display || 'Select time'}
         </span>
-        <Clock size={14} className={open ? 'text-black' : 'text-[#BBBBBB]'} />
+        <Clock size={13} className={open ? 'text-black' : 'text-[#C0C0C0]'} />
       </button>
 
       {open && createPortal(dropdown, document.body)}
