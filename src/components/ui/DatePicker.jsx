@@ -41,7 +41,7 @@ export default function DatePicker({ value, onChange, required, minDate, maxDate
   }, [open])
 
   function calcPos(rect) {
-    const w = Math.max(rect.width, 200)
+    const w = Math.max(rect.width, 260)
     const left = rect.left + rect.width / 2 - w / 2
     const safeLeft = Math.max(8, Math.min(left, window.innerWidth - w - 8))
     return { bottom: window.innerHeight - rect.top + 8, left: safeLeft, width: w }
@@ -130,11 +130,11 @@ export default function DatePicker({ value, onChange, required, minDate, maxDate
         </div>
       </div>
 
-      <div className="px-2 pt-1 pb-1">
+      <div className="px-3 pt-2 pb-2">
         {/* Day-of-week labels */}
-        <div className="grid grid-cols-7 mb-0.5">
+        <div className="grid grid-cols-7 mb-1">
           {DAYS.map((d, i) => (
-            <div key={i} className="h-3 flex items-center justify-center text-[8px] font-bold text-neutral-400 uppercase tracking-[0.06em]">
+            <div key={i} className="h-5 flex items-center justify-center text-[9px] font-bold text-neutral-400 uppercase tracking-[0.06em]">
               {d}
             </div>
           ))}
@@ -150,7 +150,7 @@ export default function DatePicker({ value, onChange, required, minDate, maxDate
               <div key={i} className="flex items-center justify-center">
                 <button type="button" onClick={() => pick(date)} disabled={dis}
                   className={[
-                    'w-5 h-5 rounded-full text-[10px] font-semibold transition-all flex items-center justify-center',
+                    'w-7 h-7 rounded-full text-[11px] font-semibold transition-all flex items-center justify-center',
                     dis         ? 'text-neutral-300 cursor-not-allowed'                                          :
                     sel         ? 'bg-[#111] text-white font-bold cursor-pointer shadow-sm'                      :
                     tod && !sel ? 'text-black font-bold ring-[1.5px] ring-black ring-offset-1 cursor-pointer'    :
@@ -166,14 +166,14 @@ export default function DatePicker({ value, onChange, required, minDate, maxDate
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-1 mt-0.5 border-t border-neutral-100">
+        <div className="flex items-center justify-between pt-2 mt-1 border-t border-neutral-100">
           <button type="button"
             onClick={() => { onChange({ target: { value: '' } }); setOpen(false) }}
-            className="text-[9px] font-medium text-neutral-400 hover:text-black transition-colors px-0.5">
+            className="text-[10px] font-medium text-neutral-400 hover:text-black transition-colors px-0.5">
             Clear
           </button>
           <button type="button" onClick={() => !todayDisabled && pick(today)} disabled={todayDisabled}
-            className={`text-[9px] font-bold rounded-full px-2.5 py-0.5 transition-all
+            className={`text-[10px] font-bold rounded-full px-3 py-1 transition-all
               ${todayDisabled ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed' : 'bg-[#111] text-white hover:bg-neutral-800'}`}>
             Today
           </button>
