@@ -164,9 +164,9 @@ function RescheduleInline({ booking, bookings, rooms, settings, onReschedule, on
   const labelCls = 'flex items-center gap-1 text-[10px] font-bold text-black uppercase tracking-wide mb-1'
 
   return (
-    <form onSubmit={handleSubmit} className="mt-3 bg-white border border-[#E5E5E5] rounded-2xl overflow-hidden shadow-sm">
+    <form onSubmit={handleSubmit} className="mt-3 bg-white border border-[#E5E5E5] rounded-2xl shadow-sm">
       {/* Header */}
-      <div className="px-4 py-2.5 border-b border-[#F0F0F0] bg-[#FAFAFA] flex items-center justify-between">
+      <div className="px-4 py-2.5 border-b border-[#F0F0F0] bg-[#FAFAFA] rounded-t-2xl flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <RotateCcw size={12} className="text-black" />
           <p className="text-[12px] font-bold text-black">Reschedule Meeting</p>

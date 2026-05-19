@@ -202,15 +202,16 @@ export default function ScheduleMeetingModal({
   const labelClass = 'flex items-center gap-1.5 text-xs font-semibold text-black uppercase tracking-wide'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+    <div className="fixed inset-0 z-50 overflow-y-auto" onClick={onClose}>
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
 
+      <div className="flex min-h-full items-center justify-center p-4">
       <div
-        className="relative w-full max-w-lg bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.12)] max-h-[92vh] flex flex-col"
+        className="relative w-full max-w-lg bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.12)]"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-[#E5E5E5] flex-shrink-0">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-[#E5E5E5]">
           <h2 className="text-base font-bold text-black">Schedule Meeting</h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#F9F9F9] transition-colors">
             <X size={16} className="text-[#666]" />
@@ -218,7 +219,7 @@ export default function ScheduleMeetingModal({
         </div>
 
         {/* Scrollable form body */}
-        <form id="schedule-form" onSubmit={handleSubmit} className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
+        <form id="schedule-form" onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
 
           {/* Meeting Name */}
           <div className="flex flex-col gap-1.5">
@@ -435,7 +436,7 @@ export default function ScheduleMeetingModal({
         </form>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#E5E5E5] bg-[#F9F9F9] rounded-b-2xl flex-shrink-0">
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#E5E5E5] bg-[#F9F9F9] rounded-b-2xl">
           <button type="button" onClick={onClose}
             className="px-5 py-2.5 text-sm font-medium text-black border border-[#E5E5E5] rounded-2xl hover:bg-white transition-colors">
             Cancel
@@ -455,6 +456,7 @@ export default function ScheduleMeetingModal({
             {isClient && hasConflict ? 'Submit Priority Request' : 'Schedule Meeting'}
           </button>
         </div>
+      </div>
       </div>
     </div>
   )
