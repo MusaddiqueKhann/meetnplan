@@ -43,7 +43,11 @@ export default function DatePicker({ value, onChange, required, minDate, maxDate
   function calcPos(rect) {
     const w = Math.max(rect.width, 200)
     const left = rect.left + rect.width / 2 - w / 2
-    return { top: rect.bottom + 8, left: Math.max(8, left), width: w }
+    const safeLeft = Math.max(8, Math.min(left, window.innerWidth - w - 8))
+    if (window.innerWidth < 768) {
+      return { bottom: window.innerHeight - rect.top + 8, left: safeLeft, width: w }
+    }
+    return { top: rect.bottom + 8, left: safeLeft, width: w }
   }
 
   const toggle = () => {
