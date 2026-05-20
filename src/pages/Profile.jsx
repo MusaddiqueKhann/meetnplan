@@ -107,8 +107,8 @@ export default function Profile({
       </div>
 
       {/* User info card */}
-      <div className="bg-white border border-neutral-200 rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5">
-        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-black flex items-center justify-center flex-shrink-0 overflow-hidden">
+      <div className="bg-white border border-neutral-200 rounded-2xl p-5 sm:p-6 flex items-center gap-4">
+        <div className="w-14 h-14 rounded-2xl bg-black flex items-center justify-center flex-shrink-0 overflow-hidden">
           {user.photoURL
             ? <img src={user.photoURL} alt="" className="w-full h-full object-cover" />
             : <span className="text-2xl font-bold text-white">{user.name?.charAt(0)?.toUpperCase() ?? '?'}</span>
@@ -171,12 +171,10 @@ export default function Profile({
                 <CheckCircle2 size={13} /> Password updated successfully.
               </div>
             )}
-            <div className="flex justify-end">
-              <button type="submit" disabled={passLoading}
-                className="flex items-center gap-2 px-5 py-2.5 text-[13px] font-semibold text-white bg-black rounded-xl hover:bg-neutral-800 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed">
-                {passLoading ? <Loader2 size={13} className="animate-spin" /> : 'Update Password'}
-              </button>
-            </div>
+            <button type="submit" disabled={passLoading}
+              className="w-full flex justify-center items-center gap-2 px-5 py-2.5 sm:w-auto text-[13px] font-semibold text-white bg-black rounded-xl hover:bg-neutral-800 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+              {passLoading ? <Loader2 size={13} className="animate-spin" /> : 'Update Password'}
+            </button>
           </form>
         </div>
       )}
@@ -203,7 +201,7 @@ export default function Profile({
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
               <p className="text-[13px] text-neutral-500">Permanently removes your account and all your meetings. This cannot be undone.</p>
               <button onClick={() => setDeleteConfirm(true)}
-                className="self-start sm:self-auto flex-shrink-0 flex items-center gap-2 px-4 py-2.5 text-[13px] font-semibold text-red-500 border border-red-200 rounded-xl hover:bg-red-50 active:scale-[0.98] transition-all">
+                className="w-full flex justify-center items-center gap-2 px-4 py-2.5 sm:w-auto text-[13px] font-semibold text-red-500 border border-red-200 rounded-xl hover:bg-red-50 active:scale-[0.98] transition-all">
                 <Trash2 size={13} /> Delete Account
               </button>
             </div>
@@ -215,7 +213,7 @@ export default function Profile({
                   : 'Enter your password to confirm account deletion.'}
               </p>
               {!user.isGoogleUser && (
-                <div className="relative max-w-xs">
+                <div className="relative w-full sm:max-w-xs">
                   <input type={showDelPass ? 'text' : 'password'} value={deletePass}
                     onChange={e => setDeletePass(e.target.value)} className={inputCls + ' pr-10'} placeholder="Your password" required />
                   <button type="button" onClick={() => setShowDelPass(v => !v)}
@@ -225,13 +223,13 @@ export default function Profile({
                 </div>
               )}
               {deleteError && <p className="text-xs text-red-500">{deleteError}</p>}
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <button type="submit" disabled={deleteLoading}
-                  className="flex items-center gap-2 px-5 py-2.5 text-[13px] font-semibold text-white bg-red-500 rounded-xl hover:bg-red-600 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+                  className="w-full flex justify-center items-center gap-2 px-5 py-2.5 sm:w-auto text-[13px] font-semibold text-white bg-red-500 rounded-xl hover:bg-red-600 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed">
                   {deleteLoading ? <Loader2 size={13} className="animate-spin" /> : <><Trash2 size={13} /> Confirm Delete</>}
                 </button>
                 <button type="button" onClick={() => { setDeleteConfirm(false); setDeletePass(''); setDeleteError('') }}
-                  className="px-5 py-2.5 text-[13px] font-semibold text-neutral-500 rounded-xl hover:bg-neutral-100 transition-colors">
+                  className="w-full flex justify-center px-5 py-2.5 sm:w-auto text-[13px] font-semibold text-neutral-500 rounded-xl hover:bg-neutral-100 transition-colors">
                   Cancel
                 </button>
               </div>
