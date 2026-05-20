@@ -157,7 +157,7 @@ export default function Notifications({
                 <div
                   key={n.id}
                   onClick={() => { if (!n.read) markNotificationRead?.(n.id) }}
-                  className={`group flex flex-col sm:flex-row sm:items-start gap-3 px-5 py-4 border-l-[3px] transition-all cursor-pointer
+                  className={`group flex flex-row items-start gap-3 px-5 py-4 border-l-[3px] transition-all cursor-pointer
                     ${!n.read
                       ? `${cfg.border} bg-neutral-50/60 hover:bg-neutral-100/60`
                       : 'border-l-transparent hover:bg-neutral-50/50'
@@ -182,15 +182,18 @@ export default function Notifications({
                   {/* RIGHT — 4 rows on mobile, 3 on desktop */}
                   <div className="flex-1 min-w-0 flex flex-col gap-2">
 
-                    {/* Row 1 — badges */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded-full ${cfg.light} ${cfg.text}`}>
-                        {cfg.label}
-                      </span>
-                      {n.read
-                        ? <span className="text-[10px] font-semibold text-neutral-400 bg-neutral-100 px-2.5 py-0.5 rounded-full">Read</span>
-                        : <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full">Unread</span>
-                      }
+                    {/* Row 1 — badges + timeAgo */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded-full ${cfg.light} ${cfg.text}`}>
+                          {cfg.label}
+                        </span>
+                        {n.read
+                          ? <span className="text-[10px] font-semibold text-neutral-400 bg-neutral-100 px-2.5 py-0.5 rounded-full">Read</span>
+                          : <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full">Unread</span>
+                        }
+                      </div>
+                      <span className="text-[10px] text-neutral-400 whitespace-nowrap flex-shrink-0">{timeAgo(n.createdAt)}</span>
                     </div>
 
                     {/* Row 2 — message */}
@@ -198,10 +201,10 @@ export default function Notifications({
                       {n.message}
                     </p>
 
-                    {/* Row 3 — meta */}
+                    {/* Row 3 — meta (room, date, formatted time — no timeAgo, it's in row 1) */}
                     <div className="flex items-center flex-wrap gap-x-1">
                       <span className="text-[11px] text-neutral-400">
-                        {[n.room, n.date, timeAgo(n.createdAt), fmtDateTime(n.createdAt)].filter(Boolean).join(' · ')}
+                        {[n.room, n.date, fmtDateTime(n.createdAt)].filter(Boolean).join(' · ')}
                       </span>
                     </div>
 
@@ -218,7 +221,7 @@ export default function Notifications({
                       <button
                         onClick={e => { e.stopPropagation(); deleteNotification?.(n.id) }}
                         title="Delete"
-                        className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-300 hover:text-red-400 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
+                        className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-300 hover:text-red-400 hover:bg-red-50 transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100"
                       >
                         <Trash2 size={13} />
                       </button>
