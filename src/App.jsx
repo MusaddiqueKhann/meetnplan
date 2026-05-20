@@ -14,6 +14,7 @@ import TodaysMeetings       from './pages/TodaysMeetings'
 import Profile              from './pages/Profile'
 import Notifications        from './pages/Notifications'
 import MeetingHistoryPage   from './pages/MeetingHistory'
+import MyMeetings           from './pages/MyMeetings'
 import AdminPanel           from './pages/admin/AdminPanel'
 import Layout               from './components/layout/Layout'
 import ScheduleMeetingModal from './components/modals/ScheduleMeetingModal'
@@ -675,17 +676,24 @@ export default function App() {
       <Profile
         user={user}
         onNavigate={setPage}
-        onLogout={handleLogout}
         bookings={bookings}
         deleteBooking={deleteBooking}
+      />
+    ),
+    myMeetings: (
+      <MyMeetings
+        bookings={bookings}
+        user={user}
         notifications={notifications}
         markNotificationRead={markNotificationRead}
+        deleteBooking={deleteBooking}
         deleteBookingWithReason={deleteBookingWithReason}
         rescheduleBooking={rescheduleBooking}
         cancelClientBooking={cancelClientBooking}
         rejectPriorityRequest={rejectPriorityRequest}
         rooms={rooms}
         settings={settings}
+        onNavigate={setPage}
       />
     ),
     admin: (

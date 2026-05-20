@@ -1,15 +1,16 @@
 import { useState } from 'react'
 import {
   LayoutDashboard, Calendar, Building2, PlusCircle, ChevronRight,
-  Zap, CalendarClock, X, LogOut, ShieldCheck, Bell, History,
+  Zap, CalendarClock, CalendarDays, X, LogOut, ShieldCheck, Bell, History,
 } from 'lucide-react'
 
 const BASE_NAV = [
-  { id: 'dashboard', label: 'Dashboard',        icon: LayoutDashboard },
-  { id: 'today',     label: "Today's Meetings", icon: CalendarClock   },
-  { id: 'calendar',  label: 'Calendar',         icon: Calendar        },
-  { id: 'rooms',     label: 'Meeting Rooms',    icon: Building2       },
-  { id: 'history',   label: 'Meeting History',  icon: History         },
+  { id: 'dashboard',   label: 'Dashboard',        icon: LayoutDashboard },
+  { id: 'today',       label: "Today's Meetings", icon: CalendarClock   },
+  { id: 'calendar',    label: 'Calendar',         icon: Calendar        },
+  { id: 'rooms',       label: 'Meeting Rooms',    icon: Building2       },
+  { id: 'myMeetings',  label: 'My Meetings',      icon: CalendarDays    },
+  { id: 'history',     label: 'Meeting History',  icon: History         },
 ]
 
 function pad(n) { return String(n).padStart(2, '0') }
