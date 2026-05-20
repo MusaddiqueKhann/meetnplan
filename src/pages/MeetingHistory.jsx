@@ -55,7 +55,6 @@ export default function MeetingHistoryPage({
 }) {
   const [selected, setSelected] = useState(new Set())
 
-  // Admins see all entries; regular users see their own only
   const entries = user.role === 'admin'
     ? meetingHistory
     : meetingHistory.filter(h => h.performedByEmail === user.email)
@@ -143,47 +142,17 @@ export default function MeetingHistoryPage({
             <p className="text-[12px] text-neutral-300">Meeting activity will appear here</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-neutral-100 bg-neutral-50/60">
-                  <th className="w-10 pl-5 py-3 text-left">
-                    <input
-                      type="checkbox"
-                      checked={allSelected}
-                      onChange={toggleAll}
-                      className="w-3.5 h-3.5 accent-black rounded cursor-pointer"
-                    />
-                  </th>
-                  <th className="px-4 py-3 text-left text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 whitespace-nowrap">
-                    Date &amp; Time
-                  </th>
-                  <th className="px-4 py-3 text-left text-[10px] font-extrabold uppercase tracking-widest text-neutral-400">
-                    Action
-                  </th>
-                  <th className="px-4 py-3 text-left text-[10px] font-extrabold uppercase tracking-widest text-neutral-400">
-                    Meeting
-                  </th>
-                  <th className="px-4 py-3 text-left text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 whitespace-nowrap">
-                    Room &amp; Slot
-                  </th>
-                  <th className="px-4 py-3 text-left text-[10px] font-extrabold uppercase tracking-widest text-neutral-400">
-                    Details
-                  </th>
-                  <th className="pr-5 py-3 w-8" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-50">
-                {entries.map(h => {
-                  const actionInfo = HISTORY_ACTIONS[h.action]
-                  return (
-                    <tr key={h.id} className="group hover:bg-neutral-50 transition-colors">
+          <>
+            {/* ── Mobile cards (hidden md+) ── */}
+            <div className="block md:hidden divide-y divide-neutral-100">
+              {entries.map(h => {
+                const actionInfo = HISTORY_ACTIONS[h.action]
+                return (
+                  <div key={h.id} className="p-4 bg-white">
 
-                      {/* Checkbox */}
-                      <td
-                        className="pl-5 py-3.5"
-                        onClick={e => { e.stopPropagation(); toggleSelect(h.id) }}
-                      >
+                    {/* Card top row: checkbox + badge | timeAgo + delete */}
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
                         <input
                           type="checkbox"
                           checked={selected.has(h.id)}
@@ -191,68 +160,158 @@ export default function MeetingHistoryPage({
                           onClick={e => e.stopPropagation()}
                           className="w-3.5 h-3.5 accent-black rounded cursor-pointer"
                         />
-                      </td>
-
-                      {/* Date & Time */}
-                      <td className="px-4 py-3.5 whitespace-nowrap">
-                        <p className="text-[11px] text-neutral-600 font-medium">{fmtDateTime(h.createdAt)}</p>
-                        <p className="text-[10px] text-neutral-400">{timeAgo(h.createdAt)}</p>
-                      </td>
-
-                      {/* Action badge */}
-                      <td className="px-4 py-3.5">
                         <span className={`text-[9px] font-bold uppercase tracking-wide px-2 py-1 rounded-full whitespace-nowrap ${actionInfo?.cls ?? 'bg-neutral-100 text-neutral-500'}`}>
                           {actionInfo?.label ?? h.action}
                         </span>
-                      </td>
-
-                      {/* Meeting title */}
-                      <td className="px-4 py-3.5 max-w-[180px]">
-                        <p className="text-[12px] font-semibold text-black truncate">{h.bookingTitle}</p>
-                        {user.role === 'admin' && h.performedBy && (
-                          <p className="text-[10px] text-neutral-400 mt-0.5 truncate">by {h.performedBy}</p>
-                        )}
-                      </td>
-
-                      {/* Room & Slot */}
-                      <td className="px-4 py-3.5 whitespace-nowrap">
-                        <p className="text-[11px] text-neutral-600 font-medium">{h.room}</p>
-                        <p className="text-[11px] text-neutral-400">
-                          {fmtDate(h.date)}
-                          {h.startMinutes != null && ` · ${minsToAmPm(h.startMinutes)}–${minsToAmPm(h.endMinutes)}`}
-                        </p>
-                      </td>
-
-                      {/* Details: rescheduled arrow or reason */}
-                      <td className="px-4 py-3.5 max-w-[200px]">
-                        {h.newDate ? (
-                          <p className="text-[11px] text-blue-600 font-medium">
-                            → {h.newRoom ?? h.room} · {fmtDate(h.newDate)}
-                            {h.newStartMinutes != null && ` · ${minsToAmPm(h.newStartMinutes)}–${minsToAmPm(h.newEndMinutes)}`}
-                          </p>
-                        ) : h.reason ? (
-                          <p className="text-[11px] text-neutral-500 italic line-clamp-2">{h.reason}</p>
-                        ) : (
-                          <span className="text-[11px] text-neutral-300">—</span>
-                        )}
-                      </td>
-
-                      {/* Row delete */}
-                      <td className="pr-5 py-3.5">
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-neutral-400">{timeAgo(h.createdAt)}</span>
                         <button
                           onClick={e => { e.stopPropagation(); deleteHistoryEntry?.(h.id) }}
                           title="Delete"
-                          className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-lg text-neutral-300 hover:text-red-400 hover:bg-red-50 transition-all"
+                          className="w-6 h-6 flex items-center justify-center rounded-lg text-neutral-300 hover:text-red-400 hover:bg-red-50 transition-all"
                         >
                           <Trash2 size={12} />
                         </button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                    </div>
+
+                    {/* Meeting title + performed by */}
+                    <p className="text-sm font-semibold text-black">{h.bookingTitle}</p>
+                    {user.role === 'admin' && h.performedBy && (
+                      <p className="text-[10px] text-neutral-400 mt-0.5">by {h.performedBy}</p>
+                    )}
+
+                    {/* Room & slot */}
+                    <p className="text-xs text-neutral-500 mt-1">
+                      {h.room}
+                      {h.date && ` · ${fmtDate(h.date)}`}
+                      {h.startMinutes != null && ` · ${minsToAmPm(h.startMinutes)}–${minsToAmPm(h.endMinutes)}`}
+                    </p>
+
+                    {/* Details: reschedule or reason */}
+                    {(h.newDate || h.reason) && (
+                      <div className="bg-neutral-50 p-2 rounded-lg mt-2 text-xs">
+                        {h.newDate ? (
+                          <p className="text-blue-600 font-medium">
+                            → {h.newRoom ?? h.room} · {fmtDate(h.newDate)}
+                            {h.newStartMinutes != null && ` · ${minsToAmPm(h.newStartMinutes)}–${minsToAmPm(h.newEndMinutes)}`}
+                          </p>
+                        ) : (
+                          <p className="text-neutral-500 italic">{h.reason}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* ── Desktop table (hidden below md) ── */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-neutral-100 bg-neutral-50/60">
+                    <th className="w-10 pl-5 py-3 text-left">
+                      <input
+                        type="checkbox"
+                        checked={allSelected}
+                        onChange={toggleAll}
+                        className="w-3.5 h-3.5 accent-black rounded cursor-pointer"
+                      />
+                    </th>
+                    <th className="px-4 py-3 text-left text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 whitespace-nowrap">
+                      Date &amp; Time
+                    </th>
+                    <th className="px-4 py-3 text-left text-[10px] font-extrabold uppercase tracking-widest text-neutral-400">
+                      Action
+                    </th>
+                    <th className="px-4 py-3 text-left text-[10px] font-extrabold uppercase tracking-widest text-neutral-400">
+                      Meeting
+                    </th>
+                    <th className="px-4 py-3 text-left text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 whitespace-nowrap">
+                      Room &amp; Slot
+                    </th>
+                    <th className="px-4 py-3 text-left text-[10px] font-extrabold uppercase tracking-widest text-neutral-400">
+                      Details
+                    </th>
+                    <th className="pr-5 py-3 w-8" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-50">
+                  {entries.map(h => {
+                    const actionInfo = HISTORY_ACTIONS[h.action]
+                    return (
+                      <tr key={h.id} className="group hover:bg-neutral-50 transition-colors">
+
+                        <td
+                          className="pl-5 py-3.5"
+                          onClick={e => { e.stopPropagation(); toggleSelect(h.id) }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selected.has(h.id)}
+                            onChange={() => toggleSelect(h.id)}
+                            onClick={e => e.stopPropagation()}
+                            className="w-3.5 h-3.5 accent-black rounded cursor-pointer"
+                          />
+                        </td>
+
+                        <td className="px-4 py-3.5 whitespace-nowrap">
+                          <p className="text-[11px] text-neutral-600 font-medium">{fmtDateTime(h.createdAt)}</p>
+                          <p className="text-[10px] text-neutral-400">{timeAgo(h.createdAt)}</p>
+                        </td>
+
+                        <td className="px-4 py-3.5">
+                          <span className={`text-[9px] font-bold uppercase tracking-wide px-2 py-1 rounded-full whitespace-nowrap ${actionInfo?.cls ?? 'bg-neutral-100 text-neutral-500'}`}>
+                            {actionInfo?.label ?? h.action}
+                          </span>
+                        </td>
+
+                        <td className="px-4 py-3.5 max-w-[180px]">
+                          <p className="text-[12px] font-semibold text-black truncate">{h.bookingTitle}</p>
+                          {user.role === 'admin' && h.performedBy && (
+                            <p className="text-[10px] text-neutral-400 mt-0.5 truncate">by {h.performedBy}</p>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-3.5 whitespace-nowrap">
+                          <p className="text-[11px] text-neutral-600 font-medium">{h.room}</p>
+                          <p className="text-[11px] text-neutral-400">
+                            {fmtDate(h.date)}
+                            {h.startMinutes != null && ` · ${minsToAmPm(h.startMinutes)}–${minsToAmPm(h.endMinutes)}`}
+                          </p>
+                        </td>
+
+                        <td className="px-4 py-3.5 max-w-[200px]">
+                          {h.newDate ? (
+                            <p className="text-[11px] text-blue-600 font-medium">
+                              → {h.newRoom ?? h.room} · {fmtDate(h.newDate)}
+                              {h.newStartMinutes != null && ` · ${minsToAmPm(h.newStartMinutes)}–${minsToAmPm(h.newEndMinutes)}`}
+                            </p>
+                          ) : h.reason ? (
+                            <p className="text-[11px] text-neutral-500 italic line-clamp-2">{h.reason}</p>
+                          ) : (
+                            <span className="text-[11px] text-neutral-300">—</span>
+                          )}
+                        </td>
+
+                        <td className="pr-5 py-3.5">
+                          <button
+                            onClick={e => { e.stopPropagation(); deleteHistoryEntry?.(h.id) }}
+                            title="Delete"
+                            className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-lg text-neutral-300 hover:text-red-400 hover:bg-red-50 transition-all"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>
