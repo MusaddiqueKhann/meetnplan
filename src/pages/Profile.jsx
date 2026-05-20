@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import {
   ArrowLeft, ArrowRight, Eye, EyeOff, Loader2, Trash2, Lock,
   CalendarDays, Building2, Mail, User, AlertTriangle, CheckCircle2,
-  Bell, Clock, RotateCcw, History, CheckCheck,
+  RotateCcw, History,
   AlertCircle, Briefcase, DoorOpen, X, ThumbsDown,
 } from 'lucide-react'
 import RescheduleInline from '../components/RescheduleInline'
@@ -268,8 +268,6 @@ export default function Profile({
     .filter(h => h.performedByEmail === user.email)
     .slice(0, 10)
 
-  const unreadNotifs = notifications.filter(n => !n.read)
-
   async function handleChangePassword(e) {
     e.preventDefault()
     setPassError('')
@@ -309,25 +307,6 @@ export default function Profile({
     } finally {
       setDeleteLoading(false)
     }
-  }
-
-  const typeColor = {
-    priority_request:    'bg-amber-500',
-    meeting_approved:    'bg-green-500',
-    priority_rejected:   'bg-red-600',
-    priority_withdrawn:  'bg-neutral-500',
-    meeting_cancelled:   'bg-red-500',
-    meeting_rescheduled: 'bg-blue-500',
-    admin_override:      'bg-red-700',
-  }
-  const typeLabel = {
-    priority_request:    '⚡ Approval Required',
-    meeting_approved:    '✓ Meeting Approved',
-    priority_rejected:   '✕ Request Rejected',
-    priority_withdrawn:  '↩ Request Withdrawn',
-    meeting_cancelled:   '✕ Cancelled',
-    meeting_rescheduled: '↗ Rescheduled',
-    admin_override:      '⚠ Deleted by Admin',
   }
 
   return (
@@ -377,228 +356,6 @@ export default function Profile({
         </div>
       </div>
 
-      {/* Notifications */}
-      <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-neutral-100 flex items-center gap-2">
-          <Bell size={15} className="text-neutral-400" />
-          <h2 className="text-[13px] font-bold text-black">Notifications</h2>
-          {unreadNotifs.length > 0 && (
-            <span className="ml-1 px-2 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full">{unreadNotifs.length}</span>
-          )}
-          {notifications.some(n => !n.read) && (
-            <button
-              onClick={() => notifications.filter(n => !n.read).forEach(n => markNotificationRead?.(n.id))}
-              className="ml-auto flex items-center gap-1 text-[11px] text-neutral-400 hover:text-black transition-colors font-semibold"
-            >
-              <CheckCheck size={12} /> Mark all read
-            </button>
-          )}
-        </div>
-        {notifications.length === 0 ? (
-          <div className="px-6 py-8 flex flex-col items-center gap-2">
-            <Bell size={24} className="text-neutral-200" />
-            <p className="text-sm text-neutral-400">No notifications</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-neutral-100">
-            {notifications.slice(0, 20).map(n => {
-              const aState = approvalState[n.id]
-              // For priority_request notifications, look up the related booking to
-              // verify it is still pending (stale if already approved/rejected/withdrawn)
-              const relatedBooking = n.type === 'priority_request'
-                ? bookings.find(b => b.id === n.relatedBookingId)
-                : null
-              const isPriorityStillPending = relatedBooking?.status === 'pending_priority_approval'
-              const isPriorityResolved     = n.type === 'priority_request' && !isPriorityStillPending && relatedBooking !== undefined
-
-              return (
-                <div
-                  key={n.id}
-                  className={`px-6 py-4 flex items-start gap-4 ${!n.read ? 'bg-blue-50/40' : ''}`}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-2 ${n.read ? 'bg-transparent' : 'bg-blue-500'}`} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full text-white ${typeColor[n.type] ?? 'bg-neutral-400'}`}>
-                        {typeLabel[n.type] ?? n.type}
-                      </span>
-                      <span className="text-[10px] text-neutral-400">{timeAgo(n.createdAt)}</span>
-                    </div>
-                    <p className="text-[13px] font-medium text-black">{n.message}</p>
-                    {n.existingMeetingTitle && (
-                      <p className="text-[11px] text-neutral-500 mt-0.5">
-                        Your meeting: &ldquo;{n.existingMeetingTitle}&rdquo; · {n.room} · {n.date}
-                        {n.startMinutes != null && ` · ${minsToAmPm(n.startMinutes)}–${minsToAmPm(n.endMinutes)}`}
-                      </p>
-                    )}
-                    {n.clientName && (
-                      <p className="text-[11px] text-amber-700 mt-0.5 font-medium">Client: {n.clientName}</p>
-                    )}
-
-                    {/* ── Resolve / Reject actions for active priority requests ── */}
-                    {n.type === 'priority_request' && !n.read && isPriorityStillPending && aState !== 'done' && (() => {
-                      const conflictingBooking = bookings.find(b => b.id === n.bookingId)
-
-                      return (
-                        <div className="mt-3">
-                          {/* Initial action buttons */}
-                          {!aState && (
-                            <div className="flex flex-wrap gap-2">
-                              <button
-                                onClick={() => setApprovalState(s => ({ ...s, [n.id]: 'resolving' }))}
-                                className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-500 text-white text-[12px] font-bold rounded-xl hover:bg-amber-600 transition-colors"
-                              >
-                                <ArrowRight size={12} /> Resolve Conflict
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  setApprovalState(s => ({ ...s, [n.id]: 'rejecting' }))
-                                  try {
-                                    await rejectPriorityRequest?.(n.relatedBookingId, user.email)
-                                    await markNotificationRead?.(n.id)
-                                    setApprovalState(s => ({ ...s, [n.id]: 'done' }))
-                                  } catch {
-                                    setApprovalState(s => ({ ...s, [n.id]: null }))
-                                  }
-                                }}
-                                className="flex items-center gap-1.5 px-3.5 py-2 bg-red-500 text-white text-[12px] font-bold rounded-xl hover:bg-red-600 transition-colors"
-                              >
-                                <ThumbsDown size={12} /> Reject Request
-                              </button>
-                            </div>
-                          )}
-
-                          {/* Resolve panel: shown when user clicks "Resolve Conflict" */}
-                          {aState === 'resolving' && conflictingBooking && (
-                            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex flex-col gap-3">
-                              <div>
-                                <p className="text-[12px] font-bold text-amber-900">Resolve your conflict</p>
-                                <p className="text-[11px] text-amber-700 mt-0.5">
-                                  Cancel or reschedule your meeting below. Once the slot is free,
-                                  the priority request will automatically confirm.
-                                </p>
-                              </div>
-                              <div className="bg-white border border-amber-200 rounded-xl px-3 py-2.5">
-                                <p className="text-[12px] font-bold text-black">{conflictingBooking.title}</p>
-                                <p className="text-[11px] text-neutral-500">{conflictingBooking.room} · {fmtDate(conflictingBooking.date)}</p>
-                                <p className="text-[11px] text-neutral-600 font-medium">
-                                  {minsToAmPm(conflictingBooking.startMinutes)} – {minsToAmPm(conflictingBooking.endMinutes)}
-                                </p>
-                              </div>
-                              <div className="flex gap-2 flex-wrap">
-                                <button
-                                  onClick={() => setApprovalState(s => ({ ...s, [n.id]: 'cancel-confirm' }))}
-                                  className="flex items-center gap-1.5 px-3 py-2 bg-red-500 text-white text-[12px] font-bold rounded-xl hover:bg-red-600 transition-colors"
-                                >
-                                  <Trash2 size={12} /> Cancel My Meeting
-                                </button>
-                                <button
-                                  onClick={() => setApprovalState(s => ({ ...s, [n.id]: 'reschedule-form' }))}
-                                  className="flex items-center gap-1.5 px-3 py-2 bg-blue-500 text-white text-[12px] font-bold rounded-xl hover:bg-blue-600 transition-colors"
-                                >
-                                  <RotateCcw size={12} /> Reschedule
-                                </button>
-                                <button
-                                  onClick={() => setApprovalState(s => ({ ...s, [n.id]: null }))}
-                                  className="px-3 py-2 text-[12px] text-neutral-500 hover:text-black border border-neutral-200 rounded-xl bg-white transition-colors"
-                                >
-                                  Back
-                                </button>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Cancel with reason */}
-                          {aState === 'cancel-confirm' && conflictingBooking && (
-                            <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex flex-col gap-3">
-                              <p className="text-[12px] font-bold text-red-900">Cancel "{conflictingBooking.title}"</p>
-                              <textarea
-                                rows={2}
-                                placeholder="Reason for cancellation (optional)…"
-                                value={resolveReason[n.id] ?? ''}
-                                onChange={e => setResolveReason(s => ({ ...s, [n.id]: e.target.value }))}
-                                className="w-full px-3 py-2 text-[12px] border border-red-200 rounded-xl outline-none focus:border-red-400 resize-none bg-white"
-                              />
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={async () => {
-                                    try {
-                                      const reason = resolveReason[n.id]?.trim() || 'Resolved conflict for priority client request'
-                                      await deleteBookingWithReason?.(conflictingBooking, reason)
-                                      await markNotificationRead?.(n.id)
-                                      setApprovalState(s => ({ ...s, [n.id]: 'done' }))
-                                    } catch {
-                                      setApprovalState(s => ({ ...s, [n.id]: 'resolving' }))
-                                    }
-                                  }}
-                                  className="flex items-center gap-1.5 px-3 py-2 bg-red-600 text-white text-[12px] font-bold rounded-xl hover:bg-red-700 transition-colors"
-                                >
-                                  <Trash2 size={12} /> Confirm Cancel
-                                </button>
-                                <button
-                                  onClick={() => setApprovalState(s => ({ ...s, [n.id]: 'resolving' }))}
-                                  className="px-3 py-2 text-[12px] text-neutral-500 hover:text-black border border-neutral-200 rounded-xl bg-white transition-colors"
-                                >
-                                  Back
-                                </button>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Reschedule inline form */}
-                          {aState === 'reschedule-form' && conflictingBooking && (
-                            <div className="mt-1">
-                              <RescheduleInline
-                                booking={conflictingBooking}
-                                bookings={bookings}
-                                rooms={rooms}
-                                settings={settings}
-                                onReschedule={async (bk, newData) => {
-                                  try {
-                                    await rescheduleBooking?.(bk, newData)
-                                    await markNotificationRead?.(n.id)
-                                    setApprovalState(s => ({ ...s, [n.id]: 'done' }))
-                                  } catch {
-                                    setApprovalState(s => ({ ...s, [n.id]: 'resolving' }))
-                                  }
-                                }}
-                                onCancel={() => setApprovalState(s => ({ ...s, [n.id]: 'resolving' }))}
-                              />
-                            </div>
-                          )}
-
-                          {/* Rejecting spinner */}
-                          {aState === 'rejecting' && (
-                            <div className="flex items-center gap-2 text-[12px] text-neutral-500">
-                              <Loader2 size={12} className="animate-spin" /> Rejecting request…
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })()}
-
-                    {/* Stale notification: priority request no longer pending */}
-                    {isPriorityResolved && !n.read && (
-                      <p className="mt-2 text-[11px] text-neutral-400 font-medium italic">
-                        This request has already been resolved. No action needed.
-                      </p>
-                    )}
-                  </div>
-                  {!n.read && aState !== 'approving' && aState !== 'rejecting' && (
-                    <button
-                      onClick={() => markNotificationRead?.(n.id)}
-                      className="text-[11px] text-neutral-400 hover:text-black transition-colors font-semibold flex-shrink-0"
-                    >
-                      Dismiss
-                    </button>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-
       {/* My Meetings */}
       <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
         <div className="px-6 py-4 border-b border-neutral-100 flex items-center gap-2">
@@ -624,8 +381,27 @@ export default function Profile({
               const approvedCount     = isPriorityPending ? (b.approvedConflictIds?.length ?? 0) : 0
               const totalConflicts    = isPriorityPending ? (b.conflictsWithIds?.length ?? 0) : 0
 
+              // Check if a pending priority request from another user is targeting this booking
+              const targetingPriority = bookings.find(pb =>
+                pb.status === 'pending_priority_approval' &&
+                Array.isArray(pb.conflictsWithIds) &&
+                pb.conflictsWithIds.includes(b.id)
+              )
+              const isTargeted = !!targetingPriority
+              const aState     = approvalState[b.id]
+
+              // Find the priority_request notification for auto-dismissal after action
+              const targetingNotif = isTargeted
+                ? notifications.find(n => n.type === 'priority_request' && n.bookingId === b.id && !n.read)
+                : null
+
               return (
-                <div key={b.id} className={`px-4 sm:px-6 py-4 transition-colors ${isWaiting ? 'bg-red-50/30' : isPriorityPending ? 'bg-amber-50/30' : 'hover:bg-neutral-50'}`}>
+                <div key={b.id} className={`px-4 sm:px-6 py-4 transition-colors ${
+                  isWaiting ? 'bg-red-50/30' :
+                  isTargeted ? 'bg-amber-50/20' :
+                  isPriorityPending ? 'bg-amber-50/30' :
+                  'hover:bg-neutral-50'
+                }`}>
 
                   {/* Top row: info + small delete (regular meetings only) */}
                   <div className="flex items-start gap-3">
@@ -652,7 +428,7 @@ export default function Profile({
                       </p>
                     </div>
 
-                    {!isWaiting && !isPriorityPending && (
+                    {!isWaiting && !isPriorityPending && !isTargeted && (
                       <button
                         onClick={() => deleteBooking(b.id)}
                         className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-neutral-300 hover:bg-red-50 hover:text-red-400 transition-colors mt-0.5"
@@ -663,7 +439,146 @@ export default function Profile({
                     )}
                   </div>
 
-                  {/* Action needed hint — waiting for action */}
+                  {/* Conflict alert — targeted by a pending priority request */}
+                  {isTargeted && aState !== 'done' && (
+                    <p className="mt-2 text-[11px] text-amber-700 font-medium flex items-center gap-1.5">
+                      <AlertCircle size={11} />
+                      A client meeting &ldquo;{targetingPriority.title}&rdquo; is requesting this slot.
+                      {targetingPriority.coordinator && ` Requested by ${targetingPriority.coordinator}.`}
+                    </p>
+                  )}
+
+                  {/* Resolve / Reject actions for targeted meetings */}
+                  {isTargeted && aState !== 'done' && (
+                    <div className="mt-3">
+                      {/* Initial buttons */}
+                      {!aState && (
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => setApprovalState(s => ({ ...s, [b.id]: 'resolving' }))}
+                            className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-500 text-white text-[12px] font-bold rounded-xl hover:bg-amber-600 transition-colors"
+                          >
+                            <ArrowRight size={12} /> Resolve Conflict
+                          </button>
+                          <button
+                            onClick={async () => {
+                              setApprovalState(s => ({ ...s, [b.id]: 'rejecting' }))
+                              try {
+                                await rejectPriorityRequest?.(targetingPriority.id, user.email)
+                                if (targetingNotif?.id) await markNotificationRead?.(targetingNotif.id)
+                                setApprovalState(s => ({ ...s, [b.id]: 'done' }))
+                              } catch {
+                                setApprovalState(s => ({ ...s, [b.id]: null }))
+                              }
+                            }}
+                            className="flex items-center gap-1.5 px-3.5 py-2 bg-red-500 text-white text-[12px] font-bold rounded-xl hover:bg-red-600 transition-colors"
+                          >
+                            <ThumbsDown size={12} /> Reject Request
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Resolve panel */}
+                      {aState === 'resolving' && (
+                        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex flex-col gap-3">
+                          <div>
+                            <p className="text-[12px] font-bold text-amber-900">Resolve conflict for your meeting</p>
+                            <p className="text-[11px] text-amber-700 mt-0.5">
+                              Cancel or reschedule your meeting. Once the slot is free, the priority request confirms automatically.
+                            </p>
+                          </div>
+                          <div className="flex gap-2 flex-wrap">
+                            <button
+                              onClick={() => setApprovalState(s => ({ ...s, [b.id]: 'cancel-confirm' }))}
+                              className="flex items-center gap-1.5 px-3 py-2 bg-red-500 text-white text-[12px] font-bold rounded-xl hover:bg-red-600 transition-colors"
+                            >
+                              <Trash2 size={12} /> Cancel My Meeting
+                            </button>
+                            <button
+                              onClick={() => setApprovalState(s => ({ ...s, [b.id]: 'reschedule-form' }))}
+                              className="flex items-center gap-1.5 px-3 py-2 bg-blue-500 text-white text-[12px] font-bold rounded-xl hover:bg-blue-600 transition-colors"
+                            >
+                              <RotateCcw size={12} /> Reschedule
+                            </button>
+                            <button
+                              onClick={() => setApprovalState(s => ({ ...s, [b.id]: null }))}
+                              className="px-3 py-2 text-[12px] text-neutral-500 hover:text-black border border-neutral-200 rounded-xl bg-white transition-colors"
+                            >
+                              Back
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Cancel with reason */}
+                      {aState === 'cancel-confirm' && (
+                        <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex flex-col gap-3">
+                          <p className="text-[12px] font-bold text-red-900">Cancel &ldquo;{b.title || b.meetingName}&rdquo;</p>
+                          <textarea
+                            rows={2}
+                            placeholder="Reason for cancellation (optional)…"
+                            value={resolveReason[b.id] ?? ''}
+                            onChange={e => setResolveReason(s => ({ ...s, [b.id]: e.target.value }))}
+                            className="w-full px-3 py-2 text-[12px] border border-red-200 rounded-xl outline-none focus:border-red-400 resize-none bg-white"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const reason = resolveReason[b.id]?.trim() || 'Resolved conflict for priority client request'
+                                  await deleteBookingWithReason?.(b, reason)
+                                  if (targetingNotif?.id) await markNotificationRead?.(targetingNotif.id)
+                                  setApprovalState(s => ({ ...s, [b.id]: 'done' }))
+                                } catch {
+                                  setApprovalState(s => ({ ...s, [b.id]: 'resolving' }))
+                                }
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-2 bg-red-600 text-white text-[12px] font-bold rounded-xl hover:bg-red-700 transition-colors"
+                            >
+                              <Trash2 size={12} /> Confirm Cancel
+                            </button>
+                            <button
+                              onClick={() => setApprovalState(s => ({ ...s, [b.id]: 'resolving' }))}
+                              className="px-3 py-2 text-[12px] text-neutral-500 hover:text-black border border-neutral-200 rounded-xl bg-white transition-colors"
+                            >
+                              Back
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Reschedule inline form */}
+                      {aState === 'reschedule-form' && (
+                        <div className="mt-1">
+                          <RescheduleInline
+                            booking={b}
+                            bookings={bookings}
+                            rooms={rooms}
+                            settings={settings}
+                            onReschedule={async (bk, newData) => {
+                              try {
+                                await rescheduleBooking?.(bk, newData)
+                                if (targetingNotif?.id) await markNotificationRead?.(targetingNotif.id)
+                                setApprovalState(s => ({ ...s, [b.id]: 'done' }))
+                              } catch {
+                                setApprovalState(s => ({ ...s, [b.id]: 'resolving' }))
+                              }
+                            }}
+                            onCancel={() => setApprovalState(s => ({ ...s, [b.id]: 'resolving' }))}
+                          />
+                        </div>
+                      )}
+
+                      {/* Rejecting spinner */}
+                      {aState === 'rejecting' && (
+                        <div className="flex items-center gap-2 text-[12px] text-neutral-500 mt-2">
+                          <Loader2 size={12} className="animate-spin" /> Rejecting request…
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Action needed hint — waiting for action (legacy) */}
                   {isWaiting && !isOpen && (
                     <p className="mt-2 text-[11px] text-red-600 font-medium flex items-center gap-1">
                       <AlertCircle size={11} />
@@ -681,7 +596,7 @@ export default function Profile({
                     </p>
                   )}
 
-                  {/* Action buttons for waiting meetings */}
+                  {/* Action buttons for waiting meetings (legacy) */}
                   {isWaiting && (
                     <div className="mt-2.5 flex flex-wrap gap-2">
                       <button

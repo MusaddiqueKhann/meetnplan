@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import {
   LayoutDashboard, Calendar, Building2, PlusCircle, ChevronRight,
-  Zap, CalendarClock, X, LogOut, ShieldCheck, Bell, CheckCheck,
+  Zap, CalendarClock, X, LogOut, ShieldCheck, Bell,
 } from 'lucide-react'
 
 const BASE_NAV = [
@@ -22,97 +22,12 @@ function minsToAmPm(m) {
 function dateToStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
-function timeAgo(ts) {
-  if (!ts?.toMillis) return ''
-  const diff = Date.now() - ts.toMillis()
-  const mins = Math.floor(diff / 60000)
-  if (mins < 1)  return 'just now'
-  if (mins < 60) return `${mins}m ago`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24)  return `${hrs}h ago`
-  return `${Math.floor(hrs / 24)}d ago`
-}
-
-function SidebarNotifPanel({ notifications, onMarkRead, onMarkAll, onClose }) {
-  const ref = useRef(null)
-  useEffect(() => {
-    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose() }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [onClose])
-
-  const typeColor = {
-    priority_request:    'bg-amber-500',
-    meeting_approved:    'bg-green-500',
-    meeting_cancelled:   'bg-red-500',
-    meeting_rescheduled: 'bg-blue-500',
-    admin_override:      'bg-red-700',
-  }
-  const typeLabel = {
-    priority_request:    '⚡ Priority',
-    meeting_approved:    '✓ Approved',
-    meeting_cancelled:   '✕ Cancelled',
-    meeting_rescheduled: '↗ Rescheduled',
-    admin_override:      '⚠ Admin Action',
-  }
-
-  return (
-    <div
-      ref={ref}
-      className="absolute left-[268px] bottom-0 w-72 bg-white border border-[#E5E5E5] rounded-2xl shadow-xl z-[300] overflow-hidden"
-    >
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#F0F0F0]">
-        <span className="text-[12px] font-bold text-black">Notifications</span>
-        <div className="flex items-center gap-2">
-          {notifications.some(n => !n.read) && (
-            <button onClick={onMarkAll} className="flex items-center gap-1 text-[11px] font-semibold text-neutral-500 hover:text-black transition-colors">
-              <CheckCheck size={11} /> All read
-            </button>
-          )}
-          <button onClick={onClose} className="text-neutral-400 hover:text-black transition-colors">
-            <X size={13} />
-          </button>
-        </div>
-      </div>
-      <div className="max-h-72 overflow-y-auto">
-        {notifications.length === 0 ? (
-          <div className="px-4 py-8 text-center">
-            <Bell size={18} className="text-neutral-200 mx-auto mb-2" />
-            <p className="text-[11px] text-neutral-400 font-medium">No notifications</p>
-          </div>
-        ) : (
-          notifications.slice(0, 15).map(n => (
-            <button
-              key={n.id}
-              onClick={() => onMarkRead(n.id)}
-              className={`w-full text-left px-4 py-2.5 border-b border-[#F5F5F5] last:border-0 hover:bg-[#F9F9F9] transition-colors flex gap-2.5 items-start ${!n.read ? 'bg-blue-50/40' : ''}`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5 ${n.read ? 'bg-transparent' : 'bg-blue-500'}`} />
-              <div className="flex-1 min-w-0">
-                <div className="mb-0.5">
-                  <span className={`text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full text-white ${typeColor[n.type] ?? 'bg-neutral-400'}`}>
-                    {typeLabel[n.type] ?? n.type}
-                  </span>
-                </div>
-                <p className="text-[11px] font-medium text-black leading-snug">{n.message}</p>
-                <p className="text-[10px] text-neutral-400 mt-0.5">{timeAgo(n.createdAt)}</p>
-              </div>
-            </button>
-          ))
-        )}
-      </div>
-    </div>
-  )
-}
 
 export default function Sidebar({
   currentPage, onNavigate, onOpenModal, rooms = [], bookings = [],
   checkedRooms = new Set(), toggleRoom, isOpen, onClose, onLogout, user,
-  unreadCount = 0, onNavigateProfile,
-  notifications = [], markNotificationRead, markAllNotificationsRead,
+  unreadCount = 0, onNavigateProfile, onNavigateNotifications,
 }) {
-  const [notifOpen, setNotifOpen] = useState(false)
-
   const now        = new Date()
   const todayStr   = dateToStr(now)
   const nowMinutes = now.getHours() * 60 + now.getMinutes()
@@ -247,7 +162,7 @@ export default function Sidebar({
 
       {/* User card — pinned to bottom */}
       {user && (
-        <div className="mt-auto border-t border-[#EBEBEB] px-4 py-4 relative">
+        <div className="mt-auto border-t border-[#EBEBEB] px-4 py-4">
           <div className="flex items-center gap-2">
             <button
               onClick={() => onNavigateProfile?.() ?? onNavigate?.('profile')}
@@ -265,28 +180,20 @@ export default function Sidebar({
               </div>
             </button>
 
-            {/* Notification bell — desktop only (mobile has its own in the header) */}
-            <div className="hidden lg:block relative">
+            {/* Notification bell — desktop only → navigates to notifications page */}
+            <div className="hidden lg:block">
               <button
-                onClick={() => setNotifOpen(v => !v)}
+                onClick={() => onNavigateNotifications?.()}
                 title="Notifications"
-                className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[#F5F5F5] transition-colors group relative"
+                className={`w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[#F5F5F5] transition-colors group relative ${currentPage === 'notifications' ? 'bg-[#F5F5F5]' : ''}`}
               >
-                <Bell size={14} className="text-[#CCCCCC] group-hover:text-black transition-colors" />
+                <Bell size={14} className={`transition-colors ${currentPage === 'notifications' ? 'text-black' : 'text-[#CCCCCC] group-hover:text-black'}`} />
                 {unreadCount > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center leading-none">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
               </button>
-              {notifOpen && (
-                <SidebarNotifPanel
-                  notifications={notifications}
-                  onMarkRead={markNotificationRead}
-                  onMarkAll={markAllNotificationsRead}
-                  onClose={() => setNotifOpen(false)}
-                />
-              )}
             </div>
 
             <button onClick={onLogout} title="Log out"

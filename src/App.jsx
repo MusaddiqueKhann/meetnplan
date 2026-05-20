@@ -12,6 +12,7 @@ import Calendar             from './pages/Calendar'
 import Rooms                from './pages/Rooms'
 import TodaysMeetings       from './pages/TodaysMeetings'
 import Profile              from './pages/Profile'
+import Notifications        from './pages/Notifications'
 import AdminPanel           from './pages/admin/AdminPanel'
 import Layout               from './components/layout/Layout'
 import ScheduleMeetingModal from './components/modals/ScheduleMeetingModal'
@@ -589,6 +590,14 @@ export default function App() {
     await Promise.all(unread.map(n => updateDoc(doc(db, 'notifications', n.id), { read: true })))
   }, [notifications])
 
+  const deleteNotification = useCallback(async (notifId) => {
+    try { await deleteDoc(doc(db, 'notifications', notifId)) } catch (_) {}
+  }, [])
+
+  const deleteAllNotifications = useCallback(async () => {
+    await Promise.all(notificationsRef.current.map(n => deleteDoc(doc(db, 'notifications', n.id))))
+  }, [])
+
   const addRoom    = async (room)     => { const { id, ...data } = room; await addDoc(collection(db, 'rooms'), data) }
   const removeRoom = async (id)       => { await deleteDoc(doc(db, 'rooms', id)) }
   const updateRoom = async (id, data) => { await updateDoc(doc(db, 'rooms', id), data) }
@@ -624,7 +633,8 @@ export default function App() {
     isGoogleUser: firebaseUser.providerData?.[0]?.providerId === 'google.com',
   }
 
-  const safePage    = (page === 'admin' && user.role !== 'admin') ? 'dashboard' : page
+  const safePage    = (page === 'admin' && user.role !== 'admin') ? 'dashboard' :
+                     (page === 'notifications') ? 'notifications' : page
   const unreadCount = notifications.filter(n => !n.read).length
 
   const sharedProps = { rooms, bookings, user, notifications, meetingHistory }
@@ -686,6 +696,16 @@ export default function App() {
         adminOverrideApprove={adminOverrideApprove}
       />
     ),
+    notifications: (
+      <Notifications
+        notifications={notifications}
+        markNotificationRead={markNotificationRead}
+        markAllNotificationsRead={markAllNotificationsRead}
+        deleteNotification={deleteNotification}
+        deleteAllNotifications={deleteAllNotifications}
+        onNavigate={setPage}
+      />
+    ),
   }
 
   return (
@@ -700,10 +720,7 @@ export default function App() {
         toggleRoom={toggleRoom}
         onLogout={handleLogout}
         user={user}
-        notifications={notifications}
         unreadCount={unreadCount}
-        markNotificationRead={markNotificationRead}
-        markAllNotificationsRead={markAllNotificationsRead}
       >
         {pages[safePage] ?? pages.dashboard}
       </Layout>
