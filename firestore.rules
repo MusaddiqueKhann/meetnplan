@@ -75,12 +75,15 @@ service cloud.firestore {
       );
     }
 
-    // Meeting History — all authenticated users can read and create; admin can delete
+    // Meeting History — all authenticated users can read and create.
+    // Delete: owner of the entry (by email) or admin.
     match /meetingHistory/{historyId} {
       allow read:   if isAuthenticated();
       allow create: if isAuthenticated();
       allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow delete: if isAuthenticated() && (
+        resource.data.performedByEmail == request.auth.token.email || isAdmin()
+      );
     }
   }
 }

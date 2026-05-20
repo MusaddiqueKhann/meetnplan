@@ -2,7 +2,7 @@ import { useState } from 'react'
 import {
   ArrowLeft, ArrowRight, Eye, EyeOff, Loader2, Trash2, Lock,
   CalendarDays, Building2, Mail, User, AlertTriangle, CheckCircle2,
-  RotateCcw, History,
+  RotateCcw,
   AlertCircle, Briefcase, DoorOpen, X, ThumbsDown,
 } from 'lucide-react'
 import RescheduleInline from '../components/RescheduleInline'
@@ -65,18 +65,6 @@ const STATUS_CONFIG = {
   cancelled:                   { label: 'Cancelled',         cls: 'bg-neutral-100 text-neutral-500'  },
   rejected:                    { label: 'Rejected',          cls: 'bg-red-100 text-red-600'          },
   pending:                     { label: 'Pending',           cls: 'bg-neutral-100 text-neutral-500'  },
-}
-
-const HISTORY_ACTIONS = {
-  created:             { label: 'Created',            cls: 'bg-green-100 text-green-700'     },
-  priority_created:    { label: 'Priority Requested', cls: 'bg-amber-100 text-amber-700'     },
-  partial_approved:    { label: 'Partially Approved', cls: 'bg-yellow-100 text-yellow-700'   },
-  approved:            { label: 'Approved',           cls: 'bg-green-100 text-green-700'     },
-  rejected:            { label: 'Rejected',           cls: 'bg-red-100 text-red-600'         },
-  withdrawn:           { label: 'Withdrawn',          cls: 'bg-neutral-100 text-neutral-500' },
-  deleted_with_reason: { label: 'Deleted',            cls: 'bg-red-100 text-red-600'         },
-  rescheduled:         { label: 'Rescheduled',        cls: 'bg-blue-100 text-blue-700'       },
-  cancelled:           { label: 'Cancelled',          cls: 'bg-neutral-100 text-neutral-500' },
 }
 
 const DELETE_REASONS = [
@@ -229,7 +217,7 @@ function DeleteWithReasonInline({ booking, onDelete, onCancel }) {
 
 export default function Profile({
   onNavigate, onLogout, bookings = [], deleteBooking, user,
-  notifications = [], meetingHistory = [], markNotificationRead,
+  notifications = [], markNotificationRead,
   deleteBookingWithReason, rescheduleBooking, cancelClientBooking,
   rejectPriorityRequest,
   rooms = [], settings = {},
@@ -263,10 +251,6 @@ export default function Profile({
   const myMeetings = bookings
     .filter(b => b.ownerEmail === user.email)
     .sort((a, b) => a.date !== b.date ? a.date.localeCompare(b.date) : a.startMinutes - b.startMinutes)
-
-  const myHistory = meetingHistory
-    .filter(h => h.performedByEmail === user.email)
-    .slice(0, 10)
 
   async function handleChangePassword(e) {
     e.preventDefault()
@@ -675,49 +659,6 @@ export default function Profile({
           </div>
         )}
       </div>
-
-      {/* Meeting History */}
-      {myHistory.length > 0 && (
-        <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
-          <div className="px-6 py-4 border-b border-neutral-100 flex items-center gap-2">
-            <History size={15} className="text-neutral-400" />
-            <h2 className="text-[13px] font-bold text-black">Meeting History</h2>
-            <span className="ml-auto text-[11px] font-semibold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">
-              {myHistory.length} / 10
-            </span>
-          </div>
-          <div className="divide-y divide-neutral-100">
-            {myHistory.map(h => {
-              const actionInfo = HISTORY_ACTIONS[h.action]
-              return (
-                <div key={h.id} className="px-6 py-3.5 flex items-start gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide ${actionInfo?.cls ?? 'bg-neutral-100 text-neutral-500'}`}>
-                        {actionInfo?.label ?? h.action}
-                      </span>
-                      <span className="text-[11px] font-semibold text-black truncate">{h.bookingTitle}</span>
-                    </div>
-                    <p className="text-[11px] text-neutral-400">
-                      {h.room} · {h.date && fmtDate(h.date)}
-                      {h.startMinutes != null && ` · ${minsToAmPm(h.startMinutes)}–${minsToAmPm(h.endMinutes)}`}
-                    </p>
-                    {h.newDate && (
-                      <p className="text-[11px] text-blue-600 mt-0.5">
-                        → {h.newRoom ?? h.room} · {fmtDate(h.newDate)} · {minsToAmPm(h.newStartMinutes)}–{minsToAmPm(h.newEndMinutes)}
-                      </p>
-                    )}
-                    {h.reason && (
-                      <p className="text-[11px] text-neutral-500 mt-0.5 italic">Reason: {h.reason}</p>
-                    )}
-                  </div>
-                  <span className="text-[10px] text-neutral-400 flex-shrink-0 pt-0.5">{timeAgo(h.createdAt)}</span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Change Password */}
       {!user.isGoogleUser && (

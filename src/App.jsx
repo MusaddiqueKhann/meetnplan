@@ -13,6 +13,7 @@ import Rooms                from './pages/Rooms'
 import TodaysMeetings       from './pages/TodaysMeetings'
 import Profile              from './pages/Profile'
 import Notifications        from './pages/Notifications'
+import MeetingHistoryPage   from './pages/MeetingHistory'
 import AdminPanel           from './pages/admin/AdminPanel'
 import Layout               from './components/layout/Layout'
 import ScheduleMeetingModal from './components/modals/ScheduleMeetingModal'
@@ -598,6 +599,10 @@ export default function App() {
     await Promise.all(notificationsRef.current.map(n => deleteDoc(doc(db, 'notifications', n.id))))
   }, [])
 
+  const deleteHistoryEntry = useCallback(async (id) => {
+    try { await deleteDoc(doc(db, 'meetingHistory', id)) } catch (_) {}
+  }, [])
+
   const addRoom    = async (room)     => { const { id, ...data } = room; await addDoc(collection(db, 'rooms'), data) }
   const removeRoom = async (id)       => { await deleteDoc(doc(db, 'rooms', id)) }
   const updateRoom = async (id, data) => { await updateDoc(doc(db, 'rooms', id), data) }
@@ -633,8 +638,7 @@ export default function App() {
     isGoogleUser: firebaseUser.providerData?.[0]?.providerId === 'google.com',
   }
 
-  const safePage    = (page === 'admin' && user.role !== 'admin') ? 'dashboard' :
-                     (page === 'notifications') ? 'notifications' : page
+  const safePage    = (page === 'admin' && user.role !== 'admin') ? 'dashboard' : page
   const unreadCount = notifications.filter(n => !n.read).length
 
   const sharedProps = { rooms, bookings, user, notifications, meetingHistory }
@@ -675,7 +679,6 @@ export default function App() {
         bookings={bookings}
         deleteBooking={deleteBooking}
         notifications={notifications}
-        meetingHistory={meetingHistory}
         markNotificationRead={markNotificationRead}
         deleteBookingWithReason={deleteBookingWithReason}
         rescheduleBooking={rescheduleBooking}
@@ -703,6 +706,14 @@ export default function App() {
         markAllNotificationsRead={markAllNotificationsRead}
         deleteNotification={deleteNotification}
         deleteAllNotifications={deleteAllNotifications}
+        onNavigate={setPage}
+      />
+    ),
+    history: (
+      <MeetingHistoryPage
+        meetingHistory={meetingHistory}
+        user={user}
+        deleteHistoryEntry={deleteHistoryEntry}
         onNavigate={setPage}
       />
     ),
