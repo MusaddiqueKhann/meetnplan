@@ -1,16 +1,19 @@
-import { useState } from 'react'
 import {
   LayoutDashboard, Calendar, Building2, PlusCircle, ChevronRight,
   Zap, CalendarClock, CalendarDays, X, LogOut, ShieldCheck, Bell, History,
 } from 'lucide-react'
 
-const BASE_NAV = [
-  { id: 'dashboard',   label: 'Dashboard',        icon: LayoutDashboard },
-  { id: 'today',       label: "Today's Meetings", icon: CalendarClock   },
-  { id: 'calendar',    label: 'Calendar',         icon: Calendar        },
-  { id: 'rooms',       label: 'Meeting Rooms',    icon: Building2       },
-  { id: 'myMeetings',  label: 'My Meetings',      icon: CalendarDays    },
-  { id: 'history',     label: 'Meeting History',  icon: History         },
+const GLOBAL_NAV = [
+  { id: 'dashboard', label: 'Dashboard',        icon: LayoutDashboard },
+  { id: 'today',     label: "Today's Meetings", icon: CalendarClock   },
+  { id: 'calendar',  label: 'Calendar',         icon: Calendar        },
+  { id: 'rooms',     label: 'Meeting Rooms',    icon: Building2       },
+]
+
+const MY_SPACE_NAV = [
+  { id: 'myMeetings',     label: 'My Meetings',      icon: CalendarDays },
+  { id: 'history',        label: 'Meeting History',  icon: History      },
+  { id: 'notifications',  label: 'Notifications',    icon: Bell         },
 ]
 
 function pad(n) { return String(n).padStart(2, '0') }
@@ -33,10 +36,6 @@ export default function Sidebar({
   const now        = new Date()
   const todayStr   = dateToStr(now)
   const nowMinutes = now.getHours() * 60 + now.getMinutes()
-
-  const navItems = user?.role === 'admin'
-    ? [...BASE_NAV, { id: 'admin', label: 'Admin Panel', icon: ShieldCheck }]
-    : BASE_NAV
 
   const isActive = (b) =>
     !b.status || b.status === 'approved' || b.status === 'rescheduled' ||
@@ -76,19 +75,18 @@ export default function Sidebar({
 
       {/* Navigation */}
       <nav className="px-4 py-6 flex flex-col gap-6">
+
+        {/* Section 1 — Global */}
         <div>
           <p className="px-2 mb-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#BBBBBB]">Workspace</p>
           <div className="space-y-0.5">
-            {navItems.map(({ id, label, icon: Icon }) => {
-              const active  = currentPage === id
-              const isAdmin = id === 'admin'
+            {GLOBAL_NAV.map(({ id, label, icon: Icon }) => {
+              const active = currentPage === id
               return (
                 <button key={id} onClick={() => onNavigate(id)}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150 group
-                    ${active
-                      ? isAdmin ? 'bg-indigo-600 text-white shadow-sm' : 'bg-black text-white shadow-sm'
-                      : 'text-[#555] hover:bg-[#F5F5F5] hover:text-black'}`}>
-                  <Icon size={15} className={active ? 'text-white' : `${isAdmin ? 'text-indigo-400' : 'text-[#AAAAAA]'} group-hover:text-black transition-colors`} />
+                    ${active ? 'bg-black text-white shadow-sm' : 'text-[#555] hover:bg-[#F5F5F5] hover:text-black'}`}>
+                  <Icon size={15} className={active ? 'text-white' : 'text-[#AAAAAA] group-hover:text-black transition-colors'} />
                   <span className="flex-1 text-left leading-none">{label}</span>
                   {active && <ChevronRight size={13} className="text-white/40" />}
                 </button>
@@ -97,14 +95,61 @@ export default function Sidebar({
           </div>
         </div>
 
+        {/* Section 2 — My Space */}
         <div>
-          <p className="px-2 mb-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#BBBBBB]">Actions</p>
-          <button onClick={onOpenModal}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-[#555] hover:bg-[#F5F5F5] hover:text-black transition-all duration-150 group">
-            <PlusCircle size={15} className="text-[#AAAAAA] group-hover:text-black transition-colors" />
-            <span className="leading-none">Schedule Meeting</span>
-          </button>
+          <p className="px-2 mb-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#BBBBBB]">My Space</p>
+          <div className="space-y-0.5">
+            {MY_SPACE_NAV.map(({ id, label, icon: Icon }) => {
+              const active = currentPage === id
+              const showBadge = id === 'notifications' && unreadCount > 0
+              return (
+                <button key={id} onClick={() => onNavigate(id)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150 group
+                    ${active ? 'bg-black text-white shadow-sm' : 'text-[#555] hover:bg-[#F5F5F5] hover:text-black'}`}>
+                  <div className="relative flex-shrink-0">
+                    <Icon size={15} className={active ? 'text-white' : 'text-[#AAAAAA] group-hover:text-black transition-colors'} />
+                    {showBadge && !active && (
+                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 text-white text-[7px] font-bold rounded-full flex items-center justify-center leading-none">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </div>
+                  <span className="flex-1 text-left leading-none">{label}</span>
+                  {active
+                    ? <ChevronRight size={13} className="text-white/40" />
+                    : showBadge && (
+                      <span className="px-1.5 py-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full leading-none">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )
+                  }
+                </button>
+              )
+            })}
+            <button onClick={onOpenModal}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-[#555] hover:bg-[#F5F5F5] hover:text-black transition-all duration-150 group">
+              <PlusCircle size={15} className="text-[#AAAAAA] group-hover:text-black transition-colors" />
+              <span className="leading-none">Schedule Meeting</span>
+            </button>
+          </div>
         </div>
+
+        {/* Section 3 — Admin */}
+        {user?.role === 'admin' && (
+          <div>
+            <p className="px-2 mb-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#BBBBBB]">Admin</p>
+            <div className="space-y-0.5">
+              <button onClick={() => onNavigate('admin')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150 group
+                  ${currentPage === 'admin' ? 'bg-indigo-600 text-white shadow-sm' : 'text-[#555] hover:bg-[#F5F5F5] hover:text-black'}`}>
+                <ShieldCheck size={15} className={currentPage === 'admin' ? 'text-white' : 'text-indigo-400 group-hover:text-black transition-colors'} />
+                <span className="flex-1 text-left leading-none">Admin Panel</span>
+                {currentPage === 'admin' && <ChevronRight size={13} className="text-white/40" />}
+              </button>
+            </div>
+          </div>
+        )}
+
       </nav>
 
       {/* Calendar room filter + up-next panel */}
@@ -181,22 +226,6 @@ export default function Sidebar({
                 <p className="text-[13px] font-semibold text-black leading-tight truncate">{user.name}</p>
               </div>
             </button>
-
-            {/* Notification bell — desktop only → navigates to notifications page */}
-            <div className="hidden lg:block">
-              <button
-                onClick={() => onNavigateNotifications?.()}
-                title="Notifications"
-                className={`w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[#F5F5F5] transition-colors group relative ${currentPage === 'notifications' ? 'bg-[#F5F5F5]' : ''}`}
-              >
-                <Bell size={14} className={`transition-colors ${currentPage === 'notifications' ? 'text-black' : 'text-[#CCCCCC] group-hover:text-black'}`} />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center leading-none">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
-              </button>
-            </div>
 
             <button onClick={onLogout} title="Log out"
               className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[#F5F5F5] transition-colors group flex-shrink-0">
