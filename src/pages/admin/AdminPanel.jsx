@@ -1025,8 +1025,12 @@ function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove
               {opts.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
             </select>
           ))}
-          <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
-            className="col-span-2 sm:col-span-1 px-3 py-2.5 bg-white border border-neutral-200 rounded-xl text-base md:text-sm text-black focus:outline-none focus:border-black transition-colors" />
+          <div className="col-span-2 sm:col-span-1">
+            <DatePicker
+              value={filterDate}
+              onChange={e => setFilterDate(e.target.value)}
+            />
+          </div>
         </div>
         {hasActiveFilters && (
           <button onClick={() => { setFilterStatus('all'); setFilterRoom('all'); setFilterCompany('all'); setFilterDate(''); setSearch('') }}
