@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Bell, CheckCheck, Trash2, ArrowLeft } from 'lucide-react'
+import { Bell, CheckCheck, Trash2, ArrowLeft, ArrowRight } from 'lucide-react'
 
 function timeAgo(ts) {
   if (!ts?.toMillis) return ''
@@ -223,6 +223,14 @@ export default function Notifications({
                         <p className="text-[11px] text-neutral-400 mt-0.5">
                           {[n.room, n.date].filter(Boolean).join(' · ')}
                         </p>
+                      )}
+                      {n.type === 'priority_request' && (
+                        <button
+                          onClick={e => { e.stopPropagation(); onNavigate?.('myMeetings') }}
+                          className="mt-1.5 flex items-center gap-1 px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold rounded-lg transition-colors whitespace-nowrap"
+                        >
+                          View Action <ArrowRight size={10} />
+                        </button>
                       )}
                     </td>
 

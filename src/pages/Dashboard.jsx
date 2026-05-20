@@ -183,7 +183,7 @@ export default function Dashboard({
                 {/* Buttons: desktop/tablet inline */}
                 <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
                   <button
-                    onClick={() => onNavigate?.('profile')}
+                    onClick={() => onNavigate?.('myMeetings')}
                     className="px-3 py-1.5 bg-amber-500 text-white text-[11px] font-bold rounded-xl hover:bg-amber-600 transition-colors whitespace-nowrap"
                   >
                     View Actions
@@ -200,7 +200,7 @@ export default function Dashboard({
               {urgentNotifs.length > 1 ? (
                 <p className="text-[12px] text-amber-700 mt-1 leading-relaxed">
                   {urgentNotifs.length} priority client meeting requests require your decision.
-                  Go to your profile to approve or reject each request.
+                  Go to My Meetings to approve or reject each request.
                 </p>
               ) : (
                 <>
@@ -218,7 +218,7 @@ export default function Dashboard({
           {/* Buttons: mobile only, below content */}
           <div className="flex sm:hidden items-center gap-2 mt-3 ml-11">
             <button
-              onClick={() => onNavigate?.('profile')}
+              onClick={() => onNavigate?.('myMeetings')}
               className="flex-1 py-2 bg-amber-500 text-white text-[12px] font-bold rounded-xl hover:bg-amber-600 transition-colors text-center"
             >
               View Actions

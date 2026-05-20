@@ -308,7 +308,15 @@ export default function MyMeetings({
                           </div>
                           <div className="flex gap-2 flex-wrap">
                             <button
-                              onClick={() => setApprovalState(s => ({ ...s, [b.id]: 'cancel-confirm' }))}
+                              onClick={async () => {
+                                try {
+                                  await deleteBookingWithReason?.(b, 'Resolved conflict for priority client request')
+                                  if (targetingNotif?.id) await markNotificationRead?.(targetingNotif.id)
+                                  setApprovalState(s => ({ ...s, [b.id]: 'done' }))
+                                } catch {
+                                  setApprovalState(s => ({ ...s, [b.id]: 'resolving' }))
+                                }
+                              }}
                               className="flex items-center gap-1.5 px-3 py-2 bg-red-500 text-white text-[12px] font-bold rounded-xl hover:bg-red-600 transition-colors">
                               <Trash2 size={12} /> Cancel My Meeting
                             </button>
@@ -326,35 +334,6 @@ export default function MyMeetings({
                         </div>
                       )}
 
-                      {aState === 'cancel-confirm' && (
-                        <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex flex-col gap-3">
-                          <p className="text-[12px] font-bold text-red-900">Cancel &ldquo;{b.title || b.meetingName}&rdquo;</p>
-                          <textarea rows={2} placeholder="Reason for cancellation (optional)…"
-                            value={resolveReason[b.id] ?? ''}
-                            onChange={e => setResolveReason(s => ({ ...s, [b.id]: e.target.value }))}
-                            className="w-full px-3 py-2 text-[12px] border border-red-200 rounded-xl outline-none focus:border-red-400 resize-none bg-white" />
-                          <div className="flex gap-2">
-                            <button
-                              onClick={async () => {
-                                try {
-                                  const reason = resolveReason[b.id]?.trim() || 'Resolved conflict for priority client request'
-                                  await deleteBookingWithReason?.(b, reason)
-                                  if (targetingNotif?.id) await markNotificationRead?.(targetingNotif.id)
-                                  setApprovalState(s => ({ ...s, [b.id]: 'done' }))
-                                } catch {
-                                  setApprovalState(s => ({ ...s, [b.id]: 'resolving' }))
-                                }
-                              }}
-                              className="flex items-center gap-1.5 px-3 py-2 bg-red-600 text-white text-[12px] font-bold rounded-xl hover:bg-red-700 transition-colors">
-                              <Trash2 size={12} /> Confirm Cancel
-                            </button>
-                            <button onClick={() => setApprovalState(s => ({ ...s, [b.id]: 'resolving' }))}
-                              className="px-3 py-2 text-[12px] text-neutral-500 hover:text-black border border-neutral-200 rounded-xl bg-white transition-colors">
-                              Back
-                            </button>
-                          </div>
-                        </div>
-                      )}
 
                       {aState === 'reschedule-form' && (
                         <div className="mt-1">
