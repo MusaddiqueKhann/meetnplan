@@ -373,8 +373,7 @@ export default function App() {
 
 
   // Auto-reject pending_priority_approval requests if the owner hasn't responded
-  // within 45 minutes of the request being created, or if the meeting start time
-  // has already passed with no decision.
+  // within 45 minutes of the request being created.
   useEffect(() => {
     if (!firebaseUser) return
     const checkTimeouts = async () => {
@@ -382,16 +381,13 @@ export default function App() {
       const deadline = 45 * 60 * 1000
       const expired  = bookingsRef.current.filter(b => {
         if (b.status !== 'pending_priority_approval') return false
-        const parts = (b.date || '').split('-').map(Number)
-        if (parts.length < 3 || !parts[0]) return false
-        const startMs     = new Date(parts[0], parts[1] - 1, parts[2], 0, b.startMinutes ?? 0).getTime()
         const createdAtMs = b.createdAt?.toMillis?.() ?? 0
-        const requestExpired = createdAtMs > 0 && (nowMs - createdAtMs) >= deadline
-        const meetingPassed  = nowMs >= startMs
-        return requestExpired || meetingPassed
+        // Skip if createdAt not yet resolved from server (pending local write)
+        if (createdAtMs === 0) return false
+        return (nowMs - createdAtMs) >= deadline
       })
       for (const pb of expired) {
-        await rejectPriorityRequest(pb.id, 'system', 'Auto-rejected: approval deadline passed (45 min before meeting start)')
+        await rejectPriorityRequest(pb.id, 'system', 'Auto-rejected: no response within 45 minutes of request')
       }
     }
     const id = setInterval(checkTimeouts, 60_000)
