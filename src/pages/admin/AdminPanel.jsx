@@ -145,69 +145,126 @@ function UsersTab({ currentUser, bookings, deleteBooking }) {
       </div>
 
       <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-        <div className="grid grid-cols-[1fr_160px_100px_80px] min-w-[480px] text-[10px] font-bold text-neutral-400 uppercase tracking-wider px-5 py-3 border-b border-neutral-100 bg-neutral-50">
-          <span>User</span>
-          <span>Company</span>
-          <span>Role</span>
-          <span>Actions</span>
-        </div>
         {filtered.length === 0 && (
           <div className="px-5 py-10 text-center text-sm text-neutral-400">No users found</div>
         )}
-        {filtered.map(u => {
-          const isSelf = u.id === currentUser.uid
-          const bookingCount = bookings.filter(b => b.ownerEmail === u.email).length
-          return (
-            <div key={u.id} className="grid grid-cols-[1fr_160px_100px_80px] min-w-[480px] items-center px-5 py-3.5 border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition-colors">
-              <div className="min-w-0 pr-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-black flex items-center justify-center flex-shrink-0">
-                    <span className="text-[11px] font-bold text-white">{(u.name || 'U').charAt(0).toUpperCase()}</span>
+
+        {/* ── Mobile cards (hidden md+) ── */}
+        <div className="block md:hidden divide-y divide-neutral-100">
+          {filtered.map(u => {
+            const isSelf       = u.id === currentUser.uid
+            const bookingCount = bookings.filter(b => b.ownerEmail === u.email).length
+            return (
+              <div key={u.id} className="p-4 bg-white">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center flex-shrink-0">
+                      <span className="text-[11px] font-bold text-white">{(u.name || 'U').charAt(0).toUpperCase()}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-semibold text-black truncate">{u.name}</p>
+                      <p className="text-[11px] text-neutral-400 truncate">{u.email || u.id}</p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-semibold text-black truncate">{u.name}</p>
-                    <p className="text-[11px] text-neutral-400 truncate">{u.email || u.id}</p>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <button
+                      onClick={() => toggleRole(u)}
+                      disabled={isSelf || loading[u.id]}
+                      title={u.role === 'admin' ? 'Demote to user' : 'Promote to admin'}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neutral-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                      {loading[u.id]
+                        ? <Loader2 size={13} className="animate-spin text-neutral-400" />
+                        : u.role === 'admin'
+                          ? <ShieldOff size={13} className="text-neutral-500" />
+                          : <ShieldCheck size={13} className="text-indigo-500" />
+                      }
+                    </button>
+                    <button
+                      onClick={() => setConfirm(u)}
+                      disabled={isSelf || loading[u.id + '_del']}
+                      title="Delete user"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                      {loading[u.id + '_del']
+                        ? <Loader2 size={13} className="animate-spin text-red-400" />
+                        : <Trash2 size={13} className="text-red-400" />
+                      }
+                    </button>
                   </div>
                 </div>
-                <p className="text-[10px] text-neutral-300 mt-1 ml-9">{bookingCount} booking{bookingCount !== 1 ? 's' : ''}</p>
+                <div className="flex items-center gap-2 flex-wrap ml-[42px]">
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide
+                    ${u.role === 'admin' ? 'bg-black text-white' : 'bg-neutral-100 text-neutral-500'}`}>
+                    {u.role || 'user'}
+                  </span>
+                  {u.company && <span className="text-[11px] text-neutral-500">{u.company}</span>}
+                  <span className="text-[10px] text-neutral-300">{bookingCount} booking{bookingCount !== 1 ? 's' : ''}</span>
+                </div>
               </div>
-              <div>
-                <span className="text-[12px] text-neutral-600 font-medium truncate block">{u.company || '—'}</span>
+            )
+          })}
+        </div>
+
+        {/* ── Desktop table (hidden below md) ── */}
+        <div className="hidden md:block overflow-x-auto">
+          <div className="grid grid-cols-[1fr_160px_100px_80px] min-w-[480px] text-[10px] font-bold text-neutral-400 uppercase tracking-wider px-5 py-3 border-b border-neutral-100 bg-neutral-50">
+            <span>User</span>
+            <span>Company</span>
+            <span>Role</span>
+            <span>Actions</span>
+          </div>
+          {filtered.map(u => {
+            const isSelf       = u.id === currentUser.uid
+            const bookingCount = bookings.filter(b => b.ownerEmail === u.email).length
+            return (
+              <div key={u.id} className="grid grid-cols-[1fr_160px_100px_80px] min-w-[480px] items-center px-5 py-3.5 border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition-colors">
+                <div className="min-w-0 pr-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-black flex items-center justify-center flex-shrink-0">
+                      <span className="text-[11px] font-bold text-white">{(u.name || 'U').charAt(0).toUpperCase()}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-semibold text-black truncate">{u.name}</p>
+                      <p className="text-[11px] text-neutral-400 truncate">{u.email || u.id}</p>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-neutral-300 mt-1 ml-9">{bookingCount} booking{bookingCount !== 1 ? 's' : ''}</p>
+                </div>
+                <div>
+                  <span className="text-[12px] text-neutral-600 font-medium truncate block">{u.company || '—'}</span>
+                </div>
+                <div>
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide
+                    ${u.role === 'admin' ? 'bg-black text-white' : 'bg-neutral-100 text-neutral-500'}`}>
+                    {u.role || 'user'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => toggleRole(u)}
+                    disabled={isSelf || loading[u.id]}
+                    title={u.role === 'admin' ? 'Demote to user' : 'Promote to admin'}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neutral-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                    {loading[u.id]
+                      ? <Loader2 size={13} className="animate-spin text-neutral-400" />
+                      : u.role === 'admin'
+                        ? <ShieldOff size={13} className="text-neutral-500" />
+                        : <ShieldCheck size={13} className="text-indigo-500" />
+                    }
+                  </button>
+                  <button
+                    onClick={() => setConfirm(u)}
+                    disabled={isSelf || loading[u.id + '_del']}
+                    title="Delete user"
+                    className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                    {loading[u.id + '_del']
+                      ? <Loader2 size={13} className="animate-spin text-red-400" />
+                      : <Trash2 size={13} className="text-red-400" />
+                    }
+                  </button>
+                </div>
               </div>
-              <div>
-                <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide
-                  ${u.role === 'admin' ? 'bg-black text-white' : 'bg-neutral-100 text-neutral-500'}`}>
-                  {u.role || 'user'}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => toggleRole(u)}
-                  disabled={isSelf || loading[u.id]}
-                  title={u.role === 'admin' ? 'Demote to user' : 'Promote to admin'}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neutral-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
-                  {loading[u.id]
-                    ? <Loader2 size={13} className="animate-spin text-neutral-400" />
-                    : u.role === 'admin'
-                      ? <ShieldOff size={13} className="text-neutral-500" />
-                      : <ShieldCheck size={13} className="text-indigo-500" />
-                  }
-                </button>
-                <button
-                  onClick={() => setConfirm(u)}
-                  disabled={isSelf || loading[u.id + '_del']}
-                  title="Delete user"
-                  className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
-                  {loading[u.id + '_del']
-                    ? <Loader2 size={13} className="animate-spin text-red-400" />
-                    : <Trash2 size={13} className="text-red-400" />
-                  }
-                </button>
-              </div>
-            </div>
-          )
-        })}
+            )
+          })}
         </div>
       </div>
 
@@ -617,37 +674,62 @@ function BookingsTab({ bookings, rooms, deleteBooking }) {
       </div>
 
       <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-        <div className="grid grid-cols-[1fr_140px_160px_48px] min-w-[500px] text-[10px] font-bold text-neutral-400 uppercase tracking-wider px-5 py-3 border-b border-neutral-100 bg-neutral-50">
-          <span>Meeting</span>
-          <span>Room</span>
-          <span>Date & Time</span>
-          <span>Del</span>
-        </div>
         {filtered.length === 0 && (
           <div className="px-5 py-10 text-center text-sm text-neutral-400">No bookings found</div>
         )}
-        {filtered.map(b => (
-          <div key={b.id} className="grid grid-cols-[1fr_140px_160px_48px] min-w-[500px] items-center px-5 py-3.5 border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition-colors">
-            <div className="min-w-0 pr-4">
-              <p className="text-[13px] font-semibold text-black truncate">{b.title || b.meetingName}</p>
-              <p className="text-[11px] text-neutral-400 truncate">{b.ownerEmail} · {b.companyName || b.coordinator || '—'}</p>
+
+        {/* ── Mobile cards (hidden md+) ── */}
+        <div className="block md:hidden divide-y divide-neutral-100">
+          {filtered.map(b => (
+            <div key={b.id} className="p-4 bg-white">
+              <div className="flex items-start justify-between gap-3 mb-1">
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold text-black truncate">{b.title || b.meetingName}</p>
+                  <p className="text-[11px] text-neutral-400 truncate">{b.ownerEmail}</p>
+                </div>
+                <button
+                  onClick={() => { if (window.confirm('Cancel this booking?')) deleteBooking(b.id) }}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 transition-colors flex-shrink-0">
+                  <Trash2 size={13} className="text-red-400" />
+                </button>
+              </div>
+              <p className="text-[11px] text-neutral-500 font-medium">{b.room}</p>
+              <p className="text-[11px] text-neutral-400">
+                {fmtDate(b.date)} · {minsToAmPm(b.startMinutes)} – {minsToAmPm(b.endMinutes)}
+              </p>
             </div>
-            <div className="pr-4">
-              <span className="text-[12px] font-medium text-neutral-600 truncate block">{b.room}</span>
-            </div>
-            <div>
-              <p className="text-[12px] font-medium text-neutral-600">{fmtDate(b.date)}</p>
-              <p className="text-[11px] text-neutral-400">{minsToAmPm(b.startMinutes)} – {minsToAmPm(b.endMinutes)}</p>
-            </div>
-            <div>
-              <button onClick={() => { if (window.confirm('Cancel this booking?')) deleteBooking(b.id) }}
-                className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 transition-colors">
-                <Trash2 size={13} className="text-red-400" />
-              </button>
-            </div>
+          ))}
+        </div>
+
+        {/* ── Desktop table (hidden below md) ── */}
+        <div className="hidden md:block overflow-x-auto">
+          <div className="grid grid-cols-[1fr_140px_160px_48px] min-w-[500px] text-[10px] font-bold text-neutral-400 uppercase tracking-wider px-5 py-3 border-b border-neutral-100 bg-neutral-50">
+            <span>Meeting</span>
+            <span>Room</span>
+            <span>Date & Time</span>
+            <span>Del</span>
           </div>
-        ))}
+          {filtered.map(b => (
+            <div key={b.id} className="grid grid-cols-[1fr_140px_160px_48px] min-w-[500px] items-center px-5 py-3.5 border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition-colors">
+              <div className="min-w-0 pr-4">
+                <p className="text-[13px] font-semibold text-black truncate">{b.title || b.meetingName}</p>
+                <p className="text-[11px] text-neutral-400 truncate">{b.ownerEmail} · {b.companyName || b.coordinator || '—'}</p>
+              </div>
+              <div className="pr-4">
+                <span className="text-[12px] font-medium text-neutral-600 truncate block">{b.room}</span>
+              </div>
+              <div>
+                <p className="text-[12px] font-medium text-neutral-600">{fmtDate(b.date)}</p>
+                <p className="text-[11px] text-neutral-400">{minsToAmPm(b.startMinutes)} – {minsToAmPm(b.endMinutes)}</p>
+              </div>
+              <div>
+                <button onClick={() => { if (window.confirm('Cancel this booking?')) deleteBooking(b.id) }}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 transition-colors">
+                  <Trash2 size={13} className="text-red-400" />
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -924,7 +1006,7 @@ function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove
         )}
       </div>
 
-      {/* Meetings Table */}
+      {/* Meetings list */}
       {clientMeetings.length === 0 ? (
         <div className="bg-white border border-neutral-200 rounded-2xl px-5 py-14 flex flex-col items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center">
@@ -934,16 +1016,7 @@ function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove
           <p className="text-[11px] text-neutral-300">Try adjusting your filters</p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl">
-        <div className="flex flex-col gap-2 min-w-[680px]">
-          {/* Column header */}
-          <div className="grid grid-cols-[1fr_160px_180px_130px] px-4 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.1em]">
-            <span className="pl-3">Meeting</span>
-            <span>Client</span>
-            <span>Room &amp; Schedule</span>
-            <span>Status</span>
-          </div>
-
+        <div className="flex flex-col gap-2">
           {clientMeetings.map(b => {
             const statusInfo = STATUS_CONFIG[b.status]
 
@@ -953,7 +1026,6 @@ function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove
               approved:                  'border-l-green-400   bg-white',
               rescheduled:               'border-l-blue-400    bg-blue-50/20',
               cancelled:                 'border-l-neutral-300 bg-neutral-50/60',
-              // legacy
               priority_pending:          'border-l-amber-400   bg-amber-50/30',
               waiting_for_action:        'border-l-red-400     bg-red-50/20',
             }
@@ -963,14 +1035,12 @@ function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove
               approved:                  'bg-green-400',
               rescheduled:               'bg-blue-400',
               cancelled:                 'bg-neutral-300',
-              // legacy
               priority_pending:          'bg-amber-400',
               waiting_for_action:        'bg-red-400',
             }
             const accent = accentMap[b.status] ?? 'border-l-neutral-200 bg-white'
             const dot    = dotMap[b.status]    ?? 'bg-neutral-300'
 
-            // --- Admin override logic (supports multiple conflicts) ---
             const conflictIds = (b.status === 'pending_priority_approval' || b.status === 'priority_pending')
               ? (b.conflictsWithIds ?? (b.conflictsWithId ? [b.conflictsWithId] : []))
               : []
@@ -980,55 +1050,80 @@ function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove
 
             return (
               <div key={b.id} className="flex flex-col gap-0">
-                {/* Main row */}
+                {/* Main card — stacked on mobile, 4-col grid on sm+ */}
                 <div
-                  className={`grid grid-cols-[1fr_160px_180px_130px] items-center gap-2 px-4 py-3.5 border border-neutral-200 border-l-[3px] hover:shadow-sm transition-all ${accent} ${conflictingBookings.length > 0 ? 'rounded-t-2xl rounded-b-none border-b-0' : 'rounded-2xl'}`}
+                  className={`border border-neutral-200 border-l-[3px] hover:shadow-sm transition-all ${accent} ${conflictingBookings.length > 0 ? 'rounded-t-2xl rounded-b-none border-b-0' : 'rounded-2xl'}`}
                 >
-                  {/* Meeting info */}
-                  <div className="flex items-center gap-3 min-w-0 pr-2">
-                    <div className="w-8 h-8 rounded-xl bg-neutral-900 flex items-center justify-center flex-shrink-0">
-                      <span className="text-[11px] font-bold text-white">
-                        {(b.title || 'M').charAt(0).toUpperCase()}
-                      </span>
+                  {/* Mobile layout */}
+                  <div className="block sm:hidden px-4 py-3.5">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-neutral-900 flex items-center justify-center flex-shrink-0">
+                          <span className="text-[11px] font-bold text-white">{(b.title || 'M').charAt(0).toUpperCase()}</span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-bold text-black truncate leading-tight">{b.title}</p>
+                          <p className="text-[10px] text-neutral-400 truncate">{b.ownerEmail}</p>
+                        </div>
+                      </div>
+                      {statusInfo ? (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-xl text-[10px] font-bold flex-shrink-0 ${statusInfo.cls}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dot}`} />
+                          {statusInfo.label}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-neutral-400">{b.status ?? '—'}</span>
+                      )}
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-[13px] font-bold text-black truncate leading-tight">{b.title}</p>
-                      <p className="text-[11px] text-neutral-400 truncate mt-0.5">{b.coordinator} · {b.companyName}</p>
-                      <p className="text-[10px] text-neutral-300 truncate mt-0.5">{b.ownerEmail}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {b.clientName && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 border border-amber-200 rounded-lg">
+                          <Building2 size={9} className="text-amber-600" />
+                          <span className="text-[11px] font-bold text-amber-800">{b.clientName}</span>
+                        </span>
+                      )}
+                      <span className="text-[11px] text-neutral-500 font-medium">{b.room}</span>
+                      <span className="text-[11px] text-neutral-400">{fmtDate(b.date)} · {minsToAmPm(b.startMinutes)}–{minsToAmPm(b.endMinutes)}</span>
                     </div>
                   </div>
 
-                  {/* Client name */}
-                  <div>
-                    {b.clientName ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-100 border border-amber-200 rounded-xl">
-                        <Building2 size={10} className="text-amber-600 flex-shrink-0" />
-                        <span className="text-[12px] font-bold text-amber-800 truncate max-w-[100px]">{b.clientName}</span>
-                      </span>
-                    ) : (
-                      <span className="text-[11px] text-neutral-300">—</span>
-                    )}
-                  </div>
-
-                  {/* Room & schedule */}
-                  <div className="flex flex-col gap-0.5">
-                    <p className="text-[12px] font-semibold text-black truncate">{b.room}</p>
-                    <p className="text-[11px] text-neutral-500">{fmtDate(b.date)}</p>
-                    <p className="text-[11px] font-medium text-neutral-600">
-                      {minsToAmPm(b.startMinutes)} – {minsToAmPm(b.endMinutes)}
-                    </p>
-                  </div>
-
-                  {/* Status badge */}
-                  <div>
-                    {statusInfo ? (
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold ${statusInfo.cls}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dot}`} />
-                        {statusInfo.label}
-                      </span>
-                    ) : (
-                      <span className="text-[11px] text-neutral-400">{b.status ?? '—'}</span>
-                    )}
+                  {/* Desktop layout */}
+                  <div className="hidden sm:grid grid-cols-[1fr_160px_180px_130px] items-center gap-2 px-4 py-3.5">
+                    <div className="flex items-center gap-3 min-w-0 pr-2">
+                      <div className="w-8 h-8 rounded-xl bg-neutral-900 flex items-center justify-center flex-shrink-0">
+                        <span className="text-[11px] font-bold text-white">{(b.title || 'M').charAt(0).toUpperCase()}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-bold text-black truncate leading-tight">{b.title}</p>
+                        <p className="text-[11px] text-neutral-400 truncate mt-0.5">{b.coordinator} · {b.companyName}</p>
+                        <p className="text-[10px] text-neutral-300 truncate mt-0.5">{b.ownerEmail}</p>
+                      </div>
+                    </div>
+                    <div>
+                      {b.clientName ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-100 border border-amber-200 rounded-xl">
+                          <Building2 size={10} className="text-amber-600 flex-shrink-0" />
+                          <span className="text-[12px] font-bold text-amber-800 truncate max-w-[100px]">{b.clientName}</span>
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-neutral-300">—</span>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <p className="text-[12px] font-semibold text-black truncate">{b.room}</p>
+                      <p className="text-[11px] text-neutral-500">{fmtDate(b.date)}</p>
+                      <p className="text-[11px] font-medium text-neutral-600">{minsToAmPm(b.startMinutes)} – {minsToAmPm(b.endMinutes)}</p>
+                    </div>
+                    <div>
+                      {statusInfo ? (
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold ${statusInfo.cls}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dot}`} />
+                          {statusInfo.label}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-neutral-400">{b.status ?? '—'}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -1041,12 +1136,11 @@ function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove
                   const canOverride   = waitedMs >= 5 * 60_000
                   const isLast        = cbIdx === conflictingBookings.length - 1
                   return (
-                    <div key={cb.id} className={`border border-neutral-200 border-l-[3px] px-4 py-3 flex items-center gap-4 ${isLast ? 'rounded-b-2xl' : ''} ${
+                    <div key={cb.id} className={`border border-neutral-200 border-l-[3px] px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 ${isLast ? 'rounded-b-2xl' : ''} ${
                       canOverride
                         ? 'bg-red-50 border-l-red-500 border-t-red-100'
                         : 'bg-neutral-50 border-l-neutral-300 border-t-neutral-100'
                     }`}>
-                      {/* Left: conflicting meeting info */}
                       <div className="flex items-center gap-2.5 flex-1 min-w-0">
                         <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 animate-pulse ${canOverride ? 'bg-red-500' : 'bg-amber-400'}`} />
                         <div className="min-w-0">
@@ -1058,11 +1152,9 @@ function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove
                           </p>
                         </div>
                       </div>
-
-                      {/* Right: countdown or override button */}
                       {canOverride ? (
                         <div className="flex items-center gap-3 flex-shrink-0">
-                          <div className="flex flex-col items-end">
+                          <div className="flex flex-col items-start sm:items-end">
                             <p className="text-[11px] font-bold text-red-700">No action for {minsWaited} min</p>
                             <p className="text-[10px] text-red-500">Owner has not responded</p>
                           </div>
@@ -1087,7 +1179,7 @@ function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove
                         </div>
                       ) : (
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          <div className="flex flex-col items-end">
+                          <div className="flex flex-col items-start sm:items-end">
                             <p className="text-[11px] font-semibold text-neutral-600">Override in {minsRemaining} min</p>
                             <p className="text-[10px] text-neutral-400">Waiting for owner action</p>
                           </div>
@@ -1105,7 +1197,6 @@ function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove
               </div>
             )
           })}
-        </div>
         </div>
       )}
 
