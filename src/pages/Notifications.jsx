@@ -157,76 +157,76 @@ export default function Notifications({
                 <div
                   key={n.id}
                   onClick={() => { if (!n.read) markNotificationRead?.(n.id) }}
-                  className={`group flex items-start gap-3 px-5 py-4 border-l-[3px] transition-all cursor-pointer
+                  className={`group flex flex-col sm:flex-row sm:items-start gap-3 px-5 py-4 border-l-[3px] transition-all cursor-pointer
                     ${!n.read
                       ? `${cfg.border} bg-neutral-50/60 hover:bg-neutral-100/60`
                       : 'border-l-transparent hover:bg-neutral-50/50'
                     }`}
                 >
-                  {/* Checkbox */}
-                  <div className="mt-0.5 flex-shrink-0" onClick={e => { e.stopPropagation(); toggleSelect(n.id) }}>
-                    <input
-                      type="checkbox"
-                      checked={selected.has(n.id)}
-                      onChange={() => toggleSelect(n.id)}
-                      onClick={e => e.stopPropagation()}
-                      className="w-3.5 h-3.5 accent-black rounded cursor-pointer"
-                    />
+                  {/* LEFT — checkbox + icon (fixed) */}
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <div onClick={e => { e.stopPropagation(); toggleSelect(n.id) }}>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(n.id)}
+                        onChange={() => toggleSelect(n.id)}
+                        onClick={e => e.stopPropagation()}
+                        className="w-3.5 h-3.5 accent-black rounded cursor-pointer"
+                      />
+                    </div>
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${cfg.light}`}>
+                      <TypeIcon size={15} className={cfg.text} />
+                    </div>
                   </div>
 
-                  {/* Icon bubble */}
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${cfg.light}`}>
-                    <TypeIcon size={14} className={cfg.text} />
-                  </div>
+                  {/* RIGHT — 3 rows */}
+                  <div className="flex-1 min-w-0 flex flex-col gap-1.5">
 
-                  {/* Content — full width */}
-                  <div className="flex-1 min-w-0">
-                    {/* Row 1: badge + read status */}
-                    <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                      <span className={`text-[9px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-full ${cfg.light} ${cfg.text}`}>
+                    {/* Line 1 — badges */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded-full ${cfg.light} ${cfg.text}`}>
                         {cfg.label}
                       </span>
-                      {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />}
                       {n.read
-                        ? <span className="text-[10px] font-semibold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">Read</span>
-                        : <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Unread</span>
+                        ? <span className="text-[10px] font-semibold text-neutral-400 bg-neutral-100 px-2.5 py-0.5 rounded-full">Read</span>
+                        : <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full">Unread</span>
                       }
                     </div>
 
-                    {/* Row 2: message + View Action button */}
-                    <div className="flex items-start justify-between gap-4">
-                      <p className="text-[13px] font-medium text-black leading-snug flex-1">
+                    {/* Line 2 — message + action buttons */}
+                    <div className="flex items-start justify-between gap-6">
+                      <p className="text-[13px] font-medium text-black leading-snug flex-1 min-w-0">
                         {n.message}
                       </p>
-                      {isPriority && (
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {isPriority && (
+                          <button
+                            onClick={e => { e.stopPropagation(); onNavigate?.('myMeetings') }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold rounded-xl transition-colors whitespace-nowrap shadow-sm"
+                          >
+                            View Action <ArrowRight size={11} />
+                          </button>
+                        )}
                         <button
-                          onClick={e => { e.stopPropagation(); onNavigate?.('myMeetings') }}
-                          className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold rounded-xl transition-colors whitespace-nowrap"
+                          onClick={e => { e.stopPropagation(); deleteNotification?.(n.id) }}
+                          title="Delete"
+                          className="opacity-0 group-hover:opacity-100 w-7 h-7 flex items-center justify-center rounded-lg text-neutral-300 hover:text-red-400 hover:bg-red-50 transition-all"
                         >
-                          View Action <ArrowRight size={10} />
+                          <Trash2 size={13} />
                         </button>
-                      )}
+                      </div>
                     </div>
 
-                    {/* Row 3: meta + date on the right */}
-                    <div className="flex items-center gap-2 mt-1.5">
-                      {(n.room || n.date) && (
-                        <span className="text-[11px] text-neutral-400">
-                          {[n.room, n.date].filter(Boolean).join(' · ')}
-                        </span>
-                      )}
-                      <span className="text-[10px] text-neutral-400">{timeAgo(n.createdAt)}</span>
-                      <span className="ml-auto text-[11px] text-neutral-400 whitespace-nowrap">
+                    {/* Line 3 — meta left, date right */}
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-[11px] text-neutral-400 truncate">
+                        {[n.room, n.date, timeAgo(n.createdAt)].filter(Boolean).join(' · ')}
+                      </span>
+                      <span className="text-[11px] text-neutral-400 whitespace-nowrap flex-shrink-0">
                         {fmtDateTime(n.createdAt)}
                       </span>
-                      <button
-                        onClick={e => { e.stopPropagation(); deleteNotification?.(n.id) }}
-                        title="Delete"
-                        className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-lg text-neutral-300 hover:text-red-400 hover:bg-red-50 transition-all"
-                      >
-                        <Trash2 size={12} />
-                      </button>
                     </div>
+
                   </div>
                 </div>
               )
