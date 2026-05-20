@@ -886,7 +886,7 @@ function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove
   const [filterStatus,  setFilterStatus]  = useState('all')
   const [filterRoom,    setFilterRoom]    = useState('all')
   const [filterCompany, setFilterCompany] = useState('all')
-  const [filterDate,    setFilterDate]    = useState('')
+  const [filterDate]    = useState('')
   const [search,        setSearch]        = useState('')
   const [now,           setNow]           = useState(Date.now())
   const [overriding,    setOverriding]    = useState({})
@@ -970,7 +970,7 @@ function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove
     .filter(h => h.meetingType === 'client' || h.action === 'priority_created' || h.action === 'approved')
     .slice(0, 40)
 
-  const hasActiveFilters = filterStatus !== 'all' || filterRoom !== 'all' || filterCompany !== 'all' || filterDate || search
+  const hasActiveFilters = filterStatus !== 'all' || filterRoom !== 'all' || filterCompany !== 'all' || search
 
   return (
     <div className="flex flex-col gap-5">
@@ -1025,15 +1025,9 @@ function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove
               {opts.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
             </select>
           ))}
-          <div className="col-span-2 sm:col-span-1">
-            <DatePicker
-              value={filterDate}
-              onChange={e => setFilterDate(e.target.value)}
-            />
-          </div>
         </div>
         {hasActiveFilters && (
-          <button onClick={() => { setFilterStatus('all'); setFilterRoom('all'); setFilterCompany('all'); setFilterDate(''); setSearch('') }}
+          <button onClick={() => { setFilterStatus('all'); setFilterRoom('all'); setFilterCompany('all'); setSearch('') }}
             className="self-start px-3 py-2 text-[13px] font-semibold text-neutral-500 hover:text-black transition-colors border border-neutral-200 rounded-xl bg-white">
             Clear filters
           </button>
