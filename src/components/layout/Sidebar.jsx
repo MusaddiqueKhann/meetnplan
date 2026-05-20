@@ -99,6 +99,11 @@ export default function Sidebar({
         <div>
           <p className="px-2 mb-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#BBBBBB]">My Space</p>
           <div className="space-y-0.5">
+            <button onClick={onOpenModal}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-[#555] hover:bg-[#F5F5F5] hover:text-black transition-all duration-150 group">
+              <PlusCircle size={15} className="text-[#AAAAAA] group-hover:text-black transition-colors" />
+              <span className="leading-none">Schedule Meeting</span>
+            </button>
             {MY_SPACE_NAV.map(({ id, label, icon: Icon }) => {
               const active = currentPage === id
               const showBadge = id === 'notifications' && unreadCount > 0
@@ -126,11 +131,6 @@ export default function Sidebar({
                 </button>
               )
             })}
-            <button onClick={onOpenModal}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-[#555] hover:bg-[#F5F5F5] hover:text-black transition-all duration-150 group">
-              <PlusCircle size={15} className="text-[#AAAAAA] group-hover:text-black transition-colors" />
-              <span className="leading-none">Schedule Meeting</span>
-            </button>
           </div>
         </div>
 
