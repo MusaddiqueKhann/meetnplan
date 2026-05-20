@@ -179,10 +179,10 @@ export default function Notifications({
                     </div>
                   </div>
 
-                  {/* RIGHT — 3 rows */}
-                  <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                  {/* RIGHT — 4 rows on mobile, 3 on desktop */}
+                  <div className="flex-1 min-w-0 flex flex-col gap-2">
 
-                    {/* Line 1 — badges */}
+                    {/* Row 1 — badges */}
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className={`text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded-full ${cfg.light} ${cfg.text}`}>
                         {cfg.label}
@@ -193,11 +193,13 @@ export default function Notifications({
                       }
                     </div>
 
-                    {/* Line 2 — message + action buttons */}
-                    <div className="flex items-start justify-between gap-6">
-                      <p className="text-[13px] font-medium text-black leading-snug flex-1 min-w-0">
+                    {/* Row 2 — message (desktop: inline with buttons via flex-row) */}
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-6">
+                      <p className="text-[13px] font-medium text-black leading-snug sm:flex-1 min-w-0">
                         {n.message}
                       </p>
+
+                      {/* Row 4 on mobile / inline on desktop — action buttons */}
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {isPriority && (
                           <button
@@ -210,15 +212,15 @@ export default function Notifications({
                         <button
                           onClick={e => { e.stopPropagation(); deleteNotification?.(n.id) }}
                           title="Delete"
-                          className="opacity-0 group-hover:opacity-100 w-7 h-7 flex items-center justify-center rounded-lg text-neutral-300 hover:text-red-400 hover:bg-red-50 transition-all"
+                          className="sm:opacity-0 sm:group-hover:opacity-100 w-7 h-7 flex items-center justify-center rounded-lg text-neutral-300 hover:text-red-400 hover:bg-red-50 transition-all"
                         >
                           <Trash2 size={13} />
                         </button>
                       </div>
                     </div>
 
-                    {/* Line 3 — meta + date inline */}
-                    <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5">
+                    {/* Row 3 — meta */}
+                    <div className="flex items-center flex-wrap gap-x-1">
                       <span className="text-[11px] text-neutral-400">
                         {[n.room, n.date, timeAgo(n.createdAt), fmtDateTime(n.createdAt)].filter(Boolean).join(' · ')}
                       </span>
