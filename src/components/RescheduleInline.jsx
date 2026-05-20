@@ -116,17 +116,17 @@ export default function RescheduleInline({ booking, bookings, rooms, settings, o
     <form onSubmit={handleSubmit} className="mt-3 w-full rounded-3xl bg-white border border-[#EEEEEE] shadow-[0_8px_40px_-8px_rgba(0,0,0,0.14),0_2px_8px_rgba(0,0,0,0.04)]">
 
       {/* Header */}
-      <div className="px-4 pt-4 pb-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="px-4 pt-4 pb-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div className="flex items-center gap-3 min-w-0">
           <div className="w-8 h-8 rounded-2xl bg-black flex items-center justify-center flex-shrink-0 shadow-sm">
             <RotateCcw size={13} className="text-white" />
           </div>
-          <div>
+          <div className="min-w-0">
             <span className="text-[14px] font-bold text-black tracking-tight block leading-tight">Reschedule</span>
             <span className="text-[11px] text-[#AAAAAA] font-medium">Pick a new date, time & duration</span>
           </div>
         </div>
-        <span className="text-[11px] font-bold text-[#AAAAAA] bg-[#F5F5F5] px-3 py-1.5 rounded-full">{duration}</span>
+        <span className="text-[11px] font-bold text-[#AAAAAA] bg-[#F5F5F5] px-3 py-1.5 rounded-full whitespace-nowrap flex-shrink-0">{duration}</span>
       </div>
 
       <div className="h-px bg-[#F2F2F2] mx-4" />
@@ -134,7 +134,7 @@ export default function RescheduleInline({ booking, bookings, rooms, settings, o
       <div className="p-4 flex flex-col gap-3">
 
         {/* Date + Time + Duration + Room row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
           <div>
             <label className={labelCls}><CalendarDays size={8} /> Date</label>
             <DatePicker
