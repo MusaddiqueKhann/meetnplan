@@ -31,6 +31,7 @@ const TYPE_CONFIG = {
   meeting_rescheduled: { label: 'Rescheduled',       accent: 'bg-blue-500',    light: 'bg-blue-50',    text: 'text-blue-700',    icon: RotateCcw,     border: 'border-l-blue-400'    },
   admin_override:      { label: 'Admin Action',      accent: 'bg-red-700',     light: 'bg-red-50',     text: 'text-red-800',     icon: AlertTriangle, border: 'border-l-red-600'     },
   slot_restored:       { label: 'Slot Restored',     accent: 'bg-blue-500',    light: 'bg-blue-50',    text: 'text-blue-700',    icon: RotateCcw,     border: 'border-l-blue-400'    },
+  meeting_reminder:    { label: 'Reminder',          accent: 'bg-violet-500',  light: 'bg-violet-50',  text: 'text-violet-700',  icon: Bell,          border: 'border-l-violet-400'  },
 }
 
 const FALLBACK_CONFIG = { label: 'Notification', accent: 'bg-neutral-400', light: 'bg-neutral-50', text: 'text-neutral-600', icon: Bell, border: 'border-l-neutral-300' }

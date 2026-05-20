@@ -1,7 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
-import { RotateCcw, CalendarDays, Clock, DoorOpen, ChevronDown, AlertCircle, Loader2, Users } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { RotateCcw, CalendarDays, Clock, Timer, DoorOpen, ChevronDown, AlertCircle, Loader2, Users } from 'lucide-react'
 import DatePicker from './ui/DatePicker'
 import TimePicker from './ui/TimePicker'
+
+const DURATIONS = ['15 min', '30 min', '45 min', '1 hour', '1.5 hours', '2 hours', '3 hours']
+const DURATION_MINUTES = {
+  '15 min': 15, '30 min': 30, '45 min': 45,
+  '1 hour': 60, '1.5 hours': 90, '2 hours': 120, '3 hours': 180,
+}
 
 function toMinutes(time) {
   if (!time) return 0
@@ -19,19 +26,38 @@ export default function RescheduleInline({ booking, bookings, rooms, settings, o
   const offDays       = settings.offDays       ?? [5, 6]
   const maxDaysAhead  = settings.maxDaysAhead  ?? 30
 
+  const bookingDurMins  = booking.endMinutes - booking.startMinutes
+  const initialDuration = Object.entries(DURATION_MINUTES).find(([, v]) => v === bookingDurMins)?.[0] ?? '30 min'
+
   const [date,     setDate]     = useState(booking.date)
   const [time,     setTime]     = useState('')
   const [room,     setRoom]     = useState(booking.room)
+  const [duration, setDuration] = useState(initialDuration)
   const [roomOpen, setRoomOpen] = useState(false)
+  const [durOpen,  setDurOpen]  = useState(false)
   const [error,    setError]    = useState('')
   const [saving,   setSaving]   = useState(false)
-  const roomRef = useRef(null)
+  const roomRef    = useRef(null)
+  const durRef     = useRef(null)
+  const durMenuRef = useRef(null)
+  const [durRect,  setDurRect] = useState(null)
 
   useEffect(() => {
-    const h = (e) => { if (roomRef.current && !roomRef.current.contains(e.target)) setRoomOpen(false) }
+    const h = (e) => {
+      if (roomRef.current && !roomRef.current.contains(e.target)) setRoomOpen(false)
+      if (
+        durRef.current && !durRef.current.contains(e.target) &&
+        !(durMenuRef.current && durMenuRef.current.contains(e.target))
+      ) setDurOpen(false)
+    }
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
   }, [])
+
+  function openDurDropdown() {
+    if (durRef.current) setDurRect(durRef.current.getBoundingClientRect())
+    setDurOpen(v => !v)
+  }
 
   function maxDateStr() {
     const d = new Date()
@@ -41,13 +67,12 @@ export default function RescheduleInline({ booking, bookings, rooms, settings, o
 
   const now              = new Date()
   const isSelectedToday  = date === todayStr()
-  const dur              = booking.endMinutes - booking.startMinutes
-  const durLabel         = `${Math.floor(dur / 60) > 0 ? `${Math.floor(dur / 60)}h ` : ''}${dur % 60 > 0 ? `${dur % 60}m` : ''}`.trim()
+  const dur              = DURATION_MINUTES[duration] || 30
   const effectiveMinHour = isSelectedToday ? Math.max(workStartHour, now.getHours()) : workStartHour
   const effectiveMaxHour = Math.floor((workEndHour * 60 - dur) / 60) + 1
 
   function validate() {
-    if (!date || !time || !room) return 'Please fill in all fields.'
+    if (!date || !time || !room || !duration) return 'Please fill in all fields.'
     const startMins = toMinutes(time)
     const endMins   = startMins + dur
     const d         = new Date(date + 'T00:00:00')
@@ -61,9 +86,13 @@ export default function RescheduleInline({ booking, bookings, rooms, settings, o
     }
     const conflict = bookings.find(b =>
       b.id !== booking.id && b.room === room && b.date === date &&
-      b.status !== 'cancelled' && startMins < b.endMinutes && endMins > b.startMinutes
+      b.status !== 'cancelled' &&
+      b.status !== 'rejected' &&
+      b.status !== 'pending_priority_approval' &&
+      b.status !== 'priority_pending' &&
+      startMins < b.endMinutes && endMins > b.startMinutes
     )
-    if (conflict) return `${room} is already booked at that time.`
+    if (conflict) return 'The selected time and date are already occupied.'
     return null
   }
 
@@ -84,7 +113,7 @@ export default function RescheduleInline({ booking, bookings, rooms, settings, o
   const labelCls = 'flex items-center gap-1 text-[9px] font-bold text-[#C0C0C0] uppercase tracking-[0.12em] mb-1.5'
 
   return (
-    <form onSubmit={handleSubmit} className="mt-3 w-full rounded-3xl bg-white border border-[#EEEEEE] shadow-[0_8px_40px_-8px_rgba(0,0,0,0.14),0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden">
+    <form onSubmit={handleSubmit} className="mt-3 w-full rounded-3xl bg-white border border-[#EEEEEE] shadow-[0_8px_40px_-8px_rgba(0,0,0,0.14),0_2px_8px_rgba(0,0,0,0.04)]">
 
       {/* Header */}
       <div className="px-4 pt-4 pb-3.5 flex items-center justify-between">
@@ -94,18 +123,18 @@ export default function RescheduleInline({ booking, bookings, rooms, settings, o
           </div>
           <div>
             <span className="text-[14px] font-bold text-black tracking-tight block leading-tight">Reschedule</span>
-            <span className="text-[11px] text-[#AAAAAA] font-medium">Pick a new date & time</span>
+            <span className="text-[11px] text-[#AAAAAA] font-medium">Pick a new date, time & duration</span>
           </div>
         </div>
-        <span className="text-[11px] font-bold text-[#AAAAAA] bg-[#F5F5F5] px-3 py-1.5 rounded-full tabular-nums">{durLabel}</span>
+        <span className="text-[11px] font-bold text-[#AAAAAA] bg-[#F5F5F5] px-3 py-1.5 rounded-full">{duration}</span>
       </div>
 
       <div className="h-px bg-[#F2F2F2] mx-4" />
 
       <div className="p-4 flex flex-col gap-3">
 
-        {/* Date + Time + Room row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        {/* Date + Time + Duration + Room row */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <div>
             <label className={labelCls}><CalendarDays size={8} /> Date</label>
             <DatePicker
@@ -127,6 +156,44 @@ export default function RescheduleInline({ booking, bookings, rooms, settings, o
               maxHour={effectiveMaxHour}
             />
           </div>
+          <div ref={durRef}>
+            <label className={labelCls}><Timer size={8} /> Duration</label>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={openDurDropdown}
+                className={inputCls}
+              >
+                <span className="font-medium truncate text-[12px]">{duration}</span>
+                <ChevronDown size={12} className={`flex-shrink-0 text-[#CCCCCC] transition-transform duration-200 ${durOpen ? 'rotate-180' : ''}`} />
+              </button>
+            </div>
+          </div>
+          {durOpen && durRect && createPortal(
+            <div
+              ref={durMenuRef}
+              style={{
+                position: 'fixed',
+                left: durRect.left,
+                bottom: window.innerHeight - durRect.top + 6,
+                width: durRect.width,
+                zIndex: 9999,
+              }}
+              className="bg-white border border-[#EEEEEE] rounded-2xl shadow-[0_-8px_24px_-4px_rgba(0,0,0,0.1)] overflow-hidden"
+            >
+              {DURATIONS.map(d => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => { setDuration(d); setDurOpen(false); setError('') }}
+                  className={`w-full flex items-center px-3.5 py-2.5 text-left transition-colors ${duration === d ? 'bg-[#FAFAFA]' : 'hover:bg-[#FAFAFA]'}`}
+                >
+                  <span className={`text-[12px] font-semibold ${duration === d ? 'text-black' : 'text-[#444]'}`}>{d}</span>
+                </button>
+              ))}
+            </div>,
+            document.body
+          )}
           <div ref={roomRef}>
             <label className={labelCls}><DoorOpen size={8} /> Room</label>
             <div className="relative">

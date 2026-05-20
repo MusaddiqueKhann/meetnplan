@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { Radio, Clock, BarChart2, CalendarCheck2, Trash2, Bell, Briefcase, AlertCircle, CheckCheck, TrendingUp, Users } from 'lucide-react'
 import Card from '../components/ui/Card'
 
@@ -60,7 +61,13 @@ export default function Dashboard({
 }) {
   const canDelete = (b) => user?.role === 'admin' || b.ownerEmail === user?.email
 
-  const now        = new Date()
+  const [liveTime, setLiveTime] = useState(new Date())
+  useEffect(() => {
+    const id = setInterval(() => setLiveTime(new Date()), 30_000)
+    return () => clearInterval(id)
+  }, [])
+
+  const now        = liveTime
   const todayStr   = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   const nowMinutes = now.getHours() * 60 + now.getMinutes()
 
@@ -150,6 +157,9 @@ export default function Dashboard({
           <h1 className="text-2xl font-extrabold text-black tracking-tight">Executive Dashboard</h1>
           <p className="text-sm text-[#666] mt-1">
             {now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            <span className="mx-1.5 text-[#D4D4D4]">·</span>
+            <Clock size={12} className="inline mb-0.5 text-[#999] mr-1" />
+            <span className="tabular-nums">{now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
           </p>
         </div>
         <button

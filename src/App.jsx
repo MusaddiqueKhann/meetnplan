@@ -163,6 +163,46 @@ export default function App() {
     } catch (_) {}
   }, [])
 
+  // 5-minute meeting reminder
+  const remindedRef = useRef(new Set())
+  useEffect(() => {
+    if (!firebaseUser?.email) return
+    function check() {
+      const now     = new Date()
+      const today   = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      const nowMins = now.getHours() * 60 + now.getMinutes()
+      const upcoming = bookingsRef.current.filter(b =>
+        b.ownerEmail === firebaseUser.email &&
+        b.date === today &&
+        (b.status === 'approved' || b.status === 'rescheduled') &&
+        b.startMinutes - nowMins >= 4 &&
+        b.startMinutes - nowMins < 6
+      )
+      for (const b of upcoming) {
+        if (remindedRef.current.has(b.id)) continue
+        remindedRef.current.add(b.id)
+        const h    = Math.floor(b.startMinutes / 60)
+        const m    = String(b.startMinutes % 60).padStart(2, '0')
+        const h12  = h === 0 ? 12 : h > 12 ? h - 12 : h
+        const time = `${h12}:${m} ${h >= 12 ? 'PM' : 'AM'}`
+        sendNotification({
+          toEmail:      b.ownerEmail,
+          toUid:        b.ownerUid,
+          type:         'meeting_reminder',
+          message:      `"${b.title}" starts in 5 minutes at ${time} in ${b.room}.`,
+          bookingId:    b.id,
+          room:         b.room,
+          date:         b.date,
+          startMinutes: b.startMinutes,
+          endMinutes:   b.endMinutes,
+        })
+      }
+    }
+    const id = setInterval(check, 30_000)
+    check()
+    return () => clearInterval(id)
+  }, [firebaseUser?.email, sendNotification])
+
   // ── Priority Approval Logic ───────────────────────────────────────────────
 
   // Smart booking — normal bookings get approved immediately.
