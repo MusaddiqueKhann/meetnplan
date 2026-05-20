@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import {
-  ArrowLeft, Eye, EyeOff, Loader2, Trash2, Lock,
+  ArrowLeft, ArrowRight, Eye, EyeOff, Loader2, Trash2, Lock,
   CalendarDays, Building2, Mail, User, AlertTriangle, CheckCircle2,
   Bell, Clock, RotateCcw, History, CheckCheck,
-  AlertCircle, Briefcase, DoorOpen, X, ThumbsUp, ThumbsDown,
+  AlertCircle, Briefcase, DoorOpen, X, ThumbsDown,
 } from 'lucide-react'
 import RescheduleInline from '../components/RescheduleInline'
 import {
@@ -231,7 +231,7 @@ export default function Profile({
   onNavigate, onLogout, bookings = [], deleteBooking, user,
   notifications = [], meetingHistory = [], markNotificationRead,
   deleteBookingWithReason, rescheduleBooking, cancelClientBooking,
-  approvePriorityRequest, rejectPriorityRequest,
+  rejectPriorityRequest,
   rooms = [], settings = {},
 }) {
   // Password change
@@ -254,8 +254,11 @@ export default function Profile({
 
   // Inline action UI state (keyed by booking id)
   const [activeAction,   setActiveAction]   = useState(null) // { id, type: 'reschedule' | 'delete' | 'withdraw' }
-  // Per-notification approval state
-  const [approvalState,  setApprovalState]  = useState({})   // { [notifId]: 'approving' | 'rejecting' | 'done' | Error }
+  // Per-notification resolve state
+  // null → buttons shown | 'resolving' → inline resolve panel | 'cancel-confirm' → cancel + reason input
+  // 'reschedule-form' → RescheduleInline | 'rejecting' → reject spinner | 'done' → action complete
+  const [approvalState,  setApprovalState]  = useState({})
+  const [resolveReason,  setResolveReason]  = useState({})
 
   const myMeetings = bookings
     .filter(b => b.ownerEmail === user.email)
@@ -432,49 +435,147 @@ export default function Profile({
                       <p className="text-[11px] text-amber-700 mt-0.5 font-medium">Client: {n.clientName}</p>
                     )}
 
-                    {/* ── Approve / Reject actions for active priority requests ── */}
-                    {n.type === 'priority_request' && !n.read && isPriorityStillPending && aState !== 'done' && (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <button
-                          disabled={!!aState}
-                          onClick={async () => {
-                            setApprovalState(s => ({ ...s, [n.id]: 'approving' }))
-                            try {
-                              await approvePriorityRequest?.(n.relatedBookingId, n.bookingId, user.email)
-                              await markNotificationRead?.(n.id)
-                              setApprovalState(s => ({ ...s, [n.id]: 'done' }))
-                            } catch (err) {
-                              setApprovalState(s => ({ ...s, [n.id]: null }))
-                            }
-                          }}
-                          className="flex items-center gap-1.5 px-3.5 py-2 bg-green-500 text-white text-[12px] font-bold rounded-xl hover:bg-green-600 transition-colors disabled:opacity-60"
-                        >
-                          {aState === 'approving'
-                            ? <Loader2 size={12} className="animate-spin" />
-                            : <ThumbsUp size={12} />}
-                          Approve Override
-                        </button>
-                        <button
-                          disabled={!!aState}
-                          onClick={async () => {
-                            setApprovalState(s => ({ ...s, [n.id]: 'rejecting' }))
-                            try {
-                              await rejectPriorityRequest?.(n.relatedBookingId, user.email)
-                              await markNotificationRead?.(n.id)
-                              setApprovalState(s => ({ ...s, [n.id]: 'done' }))
-                            } catch (err) {
-                              setApprovalState(s => ({ ...s, [n.id]: null }))
-                            }
-                          }}
-                          className="flex items-center gap-1.5 px-3.5 py-2 bg-red-500 text-white text-[12px] font-bold rounded-xl hover:bg-red-600 transition-colors disabled:opacity-60"
-                        >
-                          {aState === 'rejecting'
-                            ? <Loader2 size={12} className="animate-spin" />
-                            : <ThumbsDown size={12} />}
-                          Reject Request
-                        </button>
-                      </div>
-                    )}
+                    {/* ── Resolve / Reject actions for active priority requests ── */}
+                    {n.type === 'priority_request' && !n.read && isPriorityStillPending && aState !== 'done' && (() => {
+                      const conflictingBooking = bookings.find(b => b.id === n.bookingId)
+
+                      return (
+                        <div className="mt-3">
+                          {/* Initial action buttons */}
+                          {!aState && (
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                onClick={() => setApprovalState(s => ({ ...s, [n.id]: 'resolving' }))}
+                                className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-500 text-white text-[12px] font-bold rounded-xl hover:bg-amber-600 transition-colors"
+                              >
+                                <ArrowRight size={12} /> Resolve Conflict
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  setApprovalState(s => ({ ...s, [n.id]: 'rejecting' }))
+                                  try {
+                                    await rejectPriorityRequest?.(n.relatedBookingId, user.email)
+                                    await markNotificationRead?.(n.id)
+                                    setApprovalState(s => ({ ...s, [n.id]: 'done' }))
+                                  } catch {
+                                    setApprovalState(s => ({ ...s, [n.id]: null }))
+                                  }
+                                }}
+                                className="flex items-center gap-1.5 px-3.5 py-2 bg-red-500 text-white text-[12px] font-bold rounded-xl hover:bg-red-600 transition-colors"
+                              >
+                                <ThumbsDown size={12} /> Reject Request
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Resolve panel: shown when user clicks "Resolve Conflict" */}
+                          {aState === 'resolving' && conflictingBooking && (
+                            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex flex-col gap-3">
+                              <div>
+                                <p className="text-[12px] font-bold text-amber-900">Resolve your conflict</p>
+                                <p className="text-[11px] text-amber-700 mt-0.5">
+                                  Cancel or reschedule your meeting below. Once the slot is free,
+                                  the priority request will automatically confirm.
+                                </p>
+                              </div>
+                              <div className="bg-white border border-amber-200 rounded-xl px-3 py-2.5">
+                                <p className="text-[12px] font-bold text-black">{conflictingBooking.title}</p>
+                                <p className="text-[11px] text-neutral-500">{conflictingBooking.room} · {fmtDate(conflictingBooking.date)}</p>
+                                <p className="text-[11px] text-neutral-600 font-medium">
+                                  {minsToAmPm(conflictingBooking.startMinutes)} – {minsToAmPm(conflictingBooking.endMinutes)}
+                                </p>
+                              </div>
+                              <div className="flex gap-2 flex-wrap">
+                                <button
+                                  onClick={() => setApprovalState(s => ({ ...s, [n.id]: 'cancel-confirm' }))}
+                                  className="flex items-center gap-1.5 px-3 py-2 bg-red-500 text-white text-[12px] font-bold rounded-xl hover:bg-red-600 transition-colors"
+                                >
+                                  <Trash2 size={12} /> Cancel My Meeting
+                                </button>
+                                <button
+                                  onClick={() => setApprovalState(s => ({ ...s, [n.id]: 'reschedule-form' }))}
+                                  className="flex items-center gap-1.5 px-3 py-2 bg-blue-500 text-white text-[12px] font-bold rounded-xl hover:bg-blue-600 transition-colors"
+                                >
+                                  <RotateCcw size={12} /> Reschedule
+                                </button>
+                                <button
+                                  onClick={() => setApprovalState(s => ({ ...s, [n.id]: null }))}
+                                  className="px-3 py-2 text-[12px] text-neutral-500 hover:text-black border border-neutral-200 rounded-xl bg-white transition-colors"
+                                >
+                                  Back
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Cancel with reason */}
+                          {aState === 'cancel-confirm' && conflictingBooking && (
+                            <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex flex-col gap-3">
+                              <p className="text-[12px] font-bold text-red-900">Cancel "{conflictingBooking.title}"</p>
+                              <textarea
+                                rows={2}
+                                placeholder="Reason for cancellation (optional)…"
+                                value={resolveReason[n.id] ?? ''}
+                                onChange={e => setResolveReason(s => ({ ...s, [n.id]: e.target.value }))}
+                                className="w-full px-3 py-2 text-[12px] border border-red-200 rounded-xl outline-none focus:border-red-400 resize-none bg-white"
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      const reason = resolveReason[n.id]?.trim() || 'Resolved conflict for priority client request'
+                                      await deleteBookingWithReason?.(conflictingBooking, reason)
+                                      await markNotificationRead?.(n.id)
+                                      setApprovalState(s => ({ ...s, [n.id]: 'done' }))
+                                    } catch {
+                                      setApprovalState(s => ({ ...s, [n.id]: 'resolving' }))
+                                    }
+                                  }}
+                                  className="flex items-center gap-1.5 px-3 py-2 bg-red-600 text-white text-[12px] font-bold rounded-xl hover:bg-red-700 transition-colors"
+                                >
+                                  <Trash2 size={12} /> Confirm Cancel
+                                </button>
+                                <button
+                                  onClick={() => setApprovalState(s => ({ ...s, [n.id]: 'resolving' }))}
+                                  className="px-3 py-2 text-[12px] text-neutral-500 hover:text-black border border-neutral-200 rounded-xl bg-white transition-colors"
+                                >
+                                  Back
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Reschedule inline form */}
+                          {aState === 'reschedule-form' && conflictingBooking && (
+                            <div className="mt-1">
+                              <RescheduleInline
+                                booking={conflictingBooking}
+                                bookings={bookings}
+                                rooms={rooms}
+                                settings={settings}
+                                onReschedule={async (newData) => {
+                                  try {
+                                    await rescheduleBooking?.(conflictingBooking, newData)
+                                    await markNotificationRead?.(n.id)
+                                    setApprovalState(s => ({ ...s, [n.id]: 'done' }))
+                                  } catch {
+                                    setApprovalState(s => ({ ...s, [n.id]: 'resolving' }))
+                                  }
+                                }}
+                                onCancel={() => setApprovalState(s => ({ ...s, [n.id]: 'resolving' }))}
+                              />
+                            </div>
+                          )}
+
+                          {/* Rejecting spinner */}
+                          {aState === 'rejecting' && (
+                            <div className="flex items-center gap-2 text-[12px] text-neutral-500">
+                              <Loader2 size={12} className="animate-spin" /> Rejecting request…
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
 
                     {/* Stale notification: priority request no longer pending */}
                     {isPriorityResolved && !n.read && (
