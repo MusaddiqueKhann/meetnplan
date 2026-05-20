@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Bell, CheckCheck, Trash2, ArrowLeft, ArrowRight } from 'lucide-react'
+import { Bell, CheckCheck, Trash2, ArrowLeft, ArrowRight, Zap, Check, X, RotateCcw, AlertTriangle } from 'lucide-react'
 
 function timeAgo(ts) {
   if (!ts?.toMillis) return ''
@@ -22,24 +22,17 @@ function fmtDateTime(ts) {
   )
 }
 
-const TYPE_COLOR = {
-  priority_request:    'bg-amber-500',
-  meeting_approved:    'bg-green-500',
-  priority_rejected:   'bg-red-600',
-  priority_withdrawn:  'bg-neutral-500',
-  meeting_cancelled:   'bg-red-500',
-  meeting_rescheduled: 'bg-blue-500',
-  admin_override:      'bg-red-700',
+const TYPE_CONFIG = {
+  priority_request:    { label: 'Priority Request', accent: 'bg-amber-500',   light: 'bg-amber-50',   text: 'text-amber-700',   icon: Zap,           border: 'border-l-amber-400'   },
+  meeting_approved:    { label: 'Approved',          accent: 'bg-green-500',   light: 'bg-green-50',   text: 'text-green-700',   icon: Check,         border: 'border-l-green-400'   },
+  priority_rejected:   { label: 'Rejected',          accent: 'bg-red-600',     light: 'bg-red-50',     text: 'text-red-700',     icon: X,             border: 'border-l-red-400'     },
+  priority_withdrawn:  { label: 'Withdrawn',         accent: 'bg-neutral-500', light: 'bg-neutral-50', text: 'text-neutral-600', icon: RotateCcw,     border: 'border-l-neutral-300' },
+  meeting_cancelled:   { label: 'Cancelled',         accent: 'bg-red-500',     light: 'bg-red-50',     text: 'text-red-600',     icon: X,             border: 'border-l-red-400'     },
+  meeting_rescheduled: { label: 'Rescheduled',       accent: 'bg-blue-500',    light: 'bg-blue-50',    text: 'text-blue-700',    icon: RotateCcw,     border: 'border-l-blue-400'    },
+  admin_override:      { label: 'Admin Action',      accent: 'bg-red-700',     light: 'bg-red-50',     text: 'text-red-800',     icon: AlertTriangle, border: 'border-l-red-600'     },
 }
-const TYPE_LABEL = {
-  priority_request:    '⚡ Priority Request',
-  meeting_approved:    '✓ Approved',
-  priority_rejected:   '✕ Rejected',
-  priority_withdrawn:  '↩ Withdrawn',
-  meeting_cancelled:   '✕ Cancelled',
-  meeting_rescheduled: '↗ Rescheduled',
-  admin_override:      '⚠ Admin Action',
-}
+
+const FALLBACK_CONFIG = { label: 'Notification', accent: 'bg-neutral-400', light: 'bg-neutral-50', text: 'text-neutral-600', icon: Bell, border: 'border-l-neutral-300' }
 
 export default function Notifications({
   notifications = [],
@@ -60,9 +53,7 @@ export default function Notifications({
   })
 
   const allSelected = notifications.length > 0 && selected.size === notifications.length
-
-  const toggleAll = () =>
-    setSelected(allSelected ? new Set() : new Set(notifications.map(n => n.id)))
+  const toggleAll   = () => setSelected(allSelected ? new Set() : new Set(notifications.map(n => n.id)))
 
   const handleDeleteSelected = async () => {
     await Promise.all([...selected].map(id => deleteNotification?.(id)))
@@ -93,20 +84,34 @@ export default function Notifications({
         </div>
       </div>
 
-      {/* Table card */}
+      {/* Card */}
       <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
 
         {/* Toolbar */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-100 gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <Bell size={14} className="text-neutral-400" />
-            <span className="text-[13px] font-bold text-black">All Notifications</span>
-            <span className="px-2 py-0.5 bg-neutral-100 text-neutral-500 text-[10px] font-bold rounded-full">
-              {notifications.length}
-            </span>
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={toggleAll}
+              className="w-3.5 h-3.5 accent-black rounded cursor-pointer"
+            />
+            <div className="flex items-center gap-2">
+              <Bell size={14} className="text-neutral-400" />
+              <span className="text-[13px] font-bold text-black">All Notifications</span>
+              <span className="px-2 py-0.5 bg-neutral-100 text-neutral-500 text-[10px] font-bold rounded-full">
+                {notifications.length}
+              </span>
+              {unread > 0 && (
+                <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-full">
+                  {unread} unread
+                </span>
+              )}
+            </div>
           </div>
+
           <div className="flex items-center gap-2 flex-wrap">
-            {notifications.some(n => !n.read) && (
+            {unread > 0 && (
               <button
                 onClick={markAllNotificationsRead}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-neutral-600 hover:text-black border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-all"
@@ -142,125 +147,90 @@ export default function Notifications({
             <p className="text-[12px] text-neutral-300">You're all caught up</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-neutral-100 bg-neutral-50/60">
-                  <th className="w-10 pl-5 py-3 text-left">
+          <div className="divide-y divide-neutral-100">
+            {notifications.map(n => {
+              const cfg      = TYPE_CONFIG[n.type] ?? FALLBACK_CONFIG
+              const TypeIcon = cfg.icon
+              const isPriority = n.type === 'priority_request'
+
+              return (
+                <div
+                  key={n.id}
+                  onClick={() => { if (!n.read) markNotificationRead?.(n.id) }}
+                  className={`group flex items-start gap-4 px-5 py-4 border-l-[3px] transition-all cursor-pointer
+                    ${!n.read
+                      ? `${cfg.border} bg-neutral-50/60 hover:bg-neutral-100/60`
+                      : 'border-l-transparent hover:bg-neutral-50/50'
+                    }`}
+                >
+                  {/* Checkbox */}
+                  <div className="pt-0.5 flex-shrink-0" onClick={e => { e.stopPropagation(); toggleSelect(n.id) }}>
                     <input
                       type="checkbox"
-                      checked={allSelected}
-                      onChange={toggleAll}
+                      checked={selected.has(n.id)}
+                      onChange={() => toggleSelect(n.id)}
+                      onClick={e => e.stopPropagation()}
                       className="w-3.5 h-3.5 accent-black rounded cursor-pointer"
                     />
-                  </th>
-                  <th className="px-4 py-3 text-left text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 whitespace-nowrap">
-                    Date &amp; Time
-                  </th>
-                  <th className="px-4 py-3 text-left text-[10px] font-extrabold uppercase tracking-widest text-neutral-400">
-                    Type
-                  </th>
-                  <th className="px-4 py-3 text-left text-[10px] font-extrabold uppercase tracking-widest text-neutral-400">
-                    Message
-                  </th>
-                  <th className="px-4 py-3 text-left text-[10px] font-extrabold uppercase tracking-widest text-neutral-400">
-                    Status
-                  </th>
-                  <th className="pr-5 py-3 w-8" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-50">
-                {notifications.map(n => (
-                  <tr
-                    key={n.id}
-                    onClick={() => { if (!n.read) markNotificationRead?.(n.id) }}
-                    className={`group transition-colors cursor-pointer ${
-                      !n.read ? 'bg-blue-50/30 hover:bg-blue-50/60' : 'hover:bg-neutral-50'
-                    }`}
-                  >
-                    {/* Checkbox */}
-                    <td
-                      className="pl-5 py-3.5"
-                      onClick={e => { e.stopPropagation(); toggleSelect(n.id) }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selected.has(n.id)}
-                        onChange={() => toggleSelect(n.id)}
-                        onClick={e => e.stopPropagation()}
-                        className="w-3.5 h-3.5 accent-black rounded cursor-pointer"
-                      />
-                    </td>
+                  </div>
 
-                    {/* Date & Time */}
-                    <td className="px-4 py-3.5 whitespace-nowrap">
-                      <div className="flex items-center gap-1.5">
-                        {!n.read && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
-                        )}
-                        <div>
-                          <p className="text-[11px] text-neutral-600 font-medium">
-                            {fmtDateTime(n.createdAt)}
-                          </p>
-                          <p className="text-[10px] text-neutral-400">{timeAgo(n.createdAt)}</p>
-                        </div>
-                      </div>
-                    </td>
+                  {/* Icon bubble */}
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${cfg.light}`}>
+                    <TypeIcon size={14} className={cfg.text} />
+                  </div>
 
-                    {/* Type badge */}
-                    <td className="px-4 py-3.5">
-                      <span className={`text-[9px] font-bold uppercase tracking-wide px-2 py-1 rounded-full text-white whitespace-nowrap ${TYPE_COLOR[n.type] ?? 'bg-neutral-400'}`}>
-                        {TYPE_LABEL[n.type] ?? n.type}
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className={`text-[9px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-full ${cfg.light} ${cfg.text}`}>
+                        {cfg.label}
                       </span>
-                    </td>
+                      {!n.read && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
+                      )}
+                      <span className="text-[10px] text-neutral-400 ml-auto">{fmtDateTime(n.createdAt)}</span>
+                    </div>
 
-                    {/* Message */}
-                    <td className="px-4 py-3.5 max-w-sm">
-                      <p className="text-[12px] font-medium text-black leading-snug line-clamp-2">
-                        {n.message}
+                    <p className="text-[13px] font-medium text-black leading-snug">
+                      {n.message}
+                    </p>
+
+                    {(n.room || n.date) && (
+                      <p className="text-[11px] text-neutral-400 mt-0.5">
+                        {[n.room, n.date].filter(Boolean).join(' · ')}
                       </p>
-                      {(n.room || n.date) && (
-                        <p className="text-[11px] text-neutral-400 mt-0.5">
-                          {[n.room, n.date].filter(Boolean).join(' · ')}
-                        </p>
-                      )}
-                      {n.type === 'priority_request' && (
-                        <button
-                          onClick={e => { e.stopPropagation(); onNavigate?.('myMeetings') }}
-                          className="mt-1.5 flex items-center gap-1 px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold rounded-lg transition-colors whitespace-nowrap"
-                        >
-                          View Action <ArrowRight size={10} />
-                        </button>
-                      )}
-                    </td>
+                    )}
 
-                    {/* Status */}
-                    <td className="px-4 py-3.5">
-                      {n.read ? (
-                        <span className="text-[10px] font-semibold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">
-                          Read
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                          Unread
-                        </span>
-                      )}
-                    </td>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-[10px] text-neutral-400">{timeAgo(n.createdAt)}</span>
+                      {n.read
+                        ? <span className="text-[10px] font-semibold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">Read</span>
+                        : <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Unread</span>
+                      }
+                    </div>
+                  </div>
 
-                    {/* Row delete */}
-                    <td className="pr-5 py-3.5">
+                  {/* Right side actions */}
+                  <div className="flex items-center gap-2 flex-shrink-0 pt-0.5">
+                    {isPriority && (
                       <button
-                        onClick={e => { e.stopPropagation(); deleteNotification?.(n.id) }}
-                        title="Delete"
-                        className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-lg text-neutral-300 hover:text-red-400 hover:bg-red-50 transition-all"
+                        onClick={e => { e.stopPropagation(); onNavigate?.('myMeetings') }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold rounded-xl transition-colors whitespace-nowrap"
                       >
-                        <Trash2 size={12} />
+                        View Action <ArrowRight size={11} />
                       </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    )}
+                    <button
+                      onClick={e => { e.stopPropagation(); deleteNotification?.(n.id) }}
+                      title="Delete"
+                      className="opacity-0 group-hover:opacity-100 w-7 h-7 flex items-center justify-center rounded-lg text-neutral-300 hover:text-red-400 hover:bg-red-50 transition-all"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
