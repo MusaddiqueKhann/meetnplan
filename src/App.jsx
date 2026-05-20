@@ -392,6 +392,36 @@ export default function App() {
     return () => clearInterval(id)
   }, [firebaseUser?.uid, rejectPriorityRequest])
 
+  // ── Slot-freed Observer ───────────────────────────────────────────────────
+  // This is the PRIMARY promotion trigger. Every time the bookings collection
+  // changes (driven by Firestore onSnapshot — not by local optimistic state),
+  // scan all pending_priority_approval bookings and promote any whose requested
+  // slot is now fully clear. This fires whether the freeing action was a
+  // delete, reschedule, admin override, or even a direct Firestore edit, and
+  // works across browser sessions — User A's delete in their tab automatically
+  // promotes User B's meeting in User B's tab via the shared snapshot listener.
+  useEffect(() => {
+    if (!firebaseUser) return
+    const pending = bookings.filter(b => b.status === 'pending_priority_approval')
+    if (!pending.length) return
+
+    for (const pb of pending) {
+      const blocked = bookings.some(b =>
+        b.id !== pb.id &&
+        b.date === pb.date &&
+        b.room === pb.room &&
+        (b.status === 'approved' || b.status === 'rescheduled') &&
+        b.startMinutes < pb.endMinutes &&
+        b.endMinutes > pb.startMinutes
+      )
+      if (!blocked) {
+        // Fire-and-forget — promotePriorityToConfirmed is internally idempotent:
+        // its runTransaction reads the current status and exits if already approved.
+        promotePriorityToConfirmed(pb)
+      }
+    }
+  }, [bookings, firebaseUser?.uid, promotePriorityToConfirmed])
+
   // ── Booking CRUD ──────────────────────────────────────────────────────────
 
   // Delete a booking. Checks if the removed slot now clears any pending
