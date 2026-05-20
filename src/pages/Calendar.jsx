@@ -80,7 +80,7 @@ function EventDetailModal({ event, onClose, onDelete, canDelete }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div className="relative w-full max-w-sm bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className={`px-6 pt-6 pb-5 ${event.live ? 'bg-black' : event.status === 'waiting_for_action' ? 'bg-amber-50' : event.status === 'priority_pending' ? 'bg-orange-50' : 'bg-[#F9F9F9]'}`}>
+        <div className={`px-6 pt-6 pb-5 ${event.live ? 'bg-black' : event.status === 'waiting_for_action' ? 'bg-amber-50' : (event.status === 'priority_pending' || event.status === 'pending_priority_approval') ? 'bg-orange-50' : 'bg-[#F9F9F9]'}`}>
           <div className="flex items-start justify-between gap-3">
             <div>
               {event.live && (
@@ -97,7 +97,7 @@ function EventDetailModal({ event, onClose, onDelete, canDelete }) {
                   <span className="text-[9px] font-extrabold uppercase tracking-widest text-amber-700">Action Needed</span>
                 </div>
               )}
-              {event.status === 'priority_pending' && (
+              {(event.status === 'priority_pending' || event.status === 'pending_priority_approval') && (
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-100 border border-orange-200 mb-2">
                   <span className="text-[9px] font-extrabold uppercase tracking-widest text-orange-600">Pending Approval</span>
                 </div>
@@ -193,9 +193,11 @@ export default function Calendar({ onOpenModal, rooms = [], bookings = [], delet
     if (view === 'Day'  && dayScrollRef.current)  dayScrollRef.current.scrollTop  = scrollTarget
   }, [view])
 
+  // VISIBILITY RULE: pending_priority_approval meetings MUST NOT appear in any
+  // calendar view (Zero-Visibility Rule, spec §2 + §5).
   const isActive = (b) =>
     !b.status || b.status === 'approved' || b.status === 'rescheduled' ||
-    b.status === 'waiting_for_action'
+    b.status === 'waiting_for_action' // legacy: kept for backwards-compatibility
 
   const bookingEvents = bookings
     .filter(isActive)
@@ -369,7 +371,7 @@ export default function Calendar({ onOpenModal, rooms = [], bookings = [], delet
                               const md = heightPx >= 90
                               const lg = heightPx >= 160
                               const isWaiting    = ev.status === 'waiting_for_action'
-                              const isPriPending = ev.status === 'priority_pending'
+                              const isPriPending = ev.status === 'priority_pending' || ev.status === 'pending_priority_approval'
                               return (
                               <div key={ei}
                                 onClick={e => { e.stopPropagation(); setSelectedEvent(ev) }}
@@ -480,7 +482,7 @@ export default function Calendar({ onOpenModal, rooms = [], bookings = [], delet
                           {allEvs.slice(0, 3).map((ev, ei) => (
                             <span key={ei}
                               className={`w-1.5 h-1.5 rounded-full flex-shrink-0
-                                ${ev.live ? 'bg-black' : ev.status === 'waiting_for_action' ? 'bg-amber-400' : ev.status === 'priority_pending' ? 'bg-orange-400' : 'bg-[#AAAAAA]'}`}
+                                ${ev.live ? 'bg-black' : ev.status === 'waiting_for_action' ? 'bg-amber-400' : (ev.status === 'priority_pending' || ev.status === 'pending_priority_approval') ? 'bg-orange-400' : 'bg-[#AAAAAA]'}`}
                             />
                           ))}
                           {allEvs.length > 3 && (
@@ -510,7 +512,7 @@ export default function Calendar({ onOpenModal, rooms = [], bookings = [], delet
                                 ? 'bg-black text-white'
                                 : ev.status === 'waiting_for_action'
                                 ? 'bg-amber-100 text-amber-800 hover:bg-amber-200'
-                                : ev.status === 'priority_pending'
+                                : (ev.status === 'priority_pending' || ev.status === 'pending_priority_approval')
                                 ? 'bg-orange-100 text-orange-800 hover:bg-orange-200'
                                 : 'bg-[#F0F0F0] text-black hover:bg-[#E5E5E5]'}`}>
                             {ev.live && <span className="inline-block w-1 h-1 bg-green-400 rounded-full mr-0.5 mb-px" />}
@@ -591,7 +593,7 @@ export default function Calendar({ onOpenModal, rooms = [], bookings = [], delet
                         const lg = heightPx >= 160
                         const xl = heightPx >= 280
                         const isWaiting    = ev.status === 'waiting_for_action'
-                        const isPriPending = ev.status === 'priority_pending'
+                        const isPriPending = ev.status === 'priority_pending' || ev.status === 'pending_priority_approval'
                         return (
                           <div key={ei}
                             onClick={() => setSelectedEvent(ev)}

@@ -42,12 +42,15 @@ function timeAgo(ts) {
 }
 
 const STATUS_BADGE = {
-  approved:            { label: 'Approved',         cls: 'bg-green-100 text-green-700'  },
-  priority_pending:    { label: 'Priority Pending',  cls: 'bg-amber-100 text-amber-700'  },
-  waiting_for_action:  { label: 'Action Needed',     cls: 'bg-red-100 text-red-600'      },
-  rescheduled:         { label: 'Rescheduled',        cls: 'bg-blue-100 text-blue-700'    },
-  cancelled:           { label: 'Cancelled',          cls: 'bg-neutral-100 text-neutral-500' },
-  pending:             { label: 'Pending',            cls: 'bg-neutral-100 text-neutral-500' },
+  approved:                  { label: 'Approved',          cls: 'bg-green-100 text-green-700'      },
+  pending_priority_approval: { label: 'Awaiting Approval', cls: 'bg-amber-100 text-amber-700'      },
+  // legacy statuses
+  priority_pending:          { label: 'Priority Pending',  cls: 'bg-amber-100 text-amber-700'      },
+  waiting_for_action:        { label: 'Action Needed',     cls: 'bg-red-100 text-red-600'          },
+  rescheduled:               { label: 'Rescheduled',       cls: 'bg-blue-100 text-blue-700'        },
+  cancelled:                 { label: 'Cancelled',         cls: 'bg-neutral-100 text-neutral-500'  },
+  rejected:                  { label: 'Rejected',          cls: 'bg-red-100 text-red-600'          },
+  pending:                   { label: 'Pending',           cls: 'bg-neutral-100 text-neutral-500'  },
 }
 
 export default function Dashboard({
@@ -65,11 +68,13 @@ export default function Dashboard({
   tomorrowDate.setDate(now.getDate() + 1)
   const tomorrowStr = `${tomorrowDate.getFullYear()}-${String(tomorrowDate.getMonth() + 1).padStart(2, '0')}-${String(tomorrowDate.getDate()).padStart(2, '0')}`
 
+  // VISIBILITY RULE: pending_priority_approval meetings MUST be excluded from
+  // all calendar/dashboard queries (Zero-Visibility Rule, spec §2).
   const isActive = (b) =>
     !b.status ||
     b.status === 'approved' ||
     b.status === 'rescheduled' ||
-    b.status === 'waiting_for_action'
+    b.status === 'waiting_for_action' // legacy: kept for backwards-compatibility
 
   const todayBookings    = bookings.filter(b => b.date === todayStr && isActive(b))
   const liveItems        = todayBookings.filter(b => nowMinutes >= b.startMinutes && nowMinutes < b.endMinutes)
@@ -107,10 +112,13 @@ export default function Dashboard({
     }))
 
   // Client meeting analytics
-  const clientMeetings    = bookings.filter(b => b.meetingType === 'client')
-  const priorityPending   = bookings.filter(b => b.status === 'priority_pending')
-  const waitingForAction  = bookings.filter(b => b.status === 'waiting_for_action')
-  const rescheduledCount  = bookings.filter(b => b.status === 'rescheduled').length
+  const clientMeetings   = bookings.filter(b => b.meetingType === 'client')
+  // Count both new and legacy pending statuses
+  const priorityPending  = bookings.filter(b =>
+    b.status === 'pending_priority_approval' || b.status === 'priority_pending'
+  )
+  const waitingForAction = bookings.filter(b => b.status === 'waiting_for_action')
+  const rescheduledCount = bookings.filter(b => b.status === 'rescheduled').length
 
   // Company with most client meetings
   const companyMap = {}
@@ -191,8 +199,8 @@ export default function Dashboard({
 
               {urgentNotifs.length > 1 ? (
                 <p className="text-[12px] text-amber-700 mt-1 leading-relaxed">
-                  {urgentNotifs.length} of your meetings conflict with high-priority client bookings.
-                  Go to your profile to reschedule or cancel each affected meeting.
+                  {urgentNotifs.length} priority client meeting requests require your decision.
+                  Go to your profile to approve or reject each request.
                 </p>
               ) : (
                 <>
@@ -399,7 +407,7 @@ export default function Dashboard({
                 const person = item.coordinator || item.companyName || null
                 const statusInfo = STATUS_BADGE[item.status]
                 const isWaiting    = item.status === 'waiting_for_action'
-                const isPriPending = item.status === 'priority_pending'
+                const isPriPending = item.status === 'pending_priority_approval' || item.status === 'priority_pending'
                 const isConflicted = isWaiting || isPriPending
                 const liveClean    = item.isLive && !isConflicted
 

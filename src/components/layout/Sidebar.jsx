@@ -123,7 +123,7 @@ export default function Sidebar({
 
   const isActive = (b) =>
     !b.status || b.status === 'approved' || b.status === 'rescheduled' ||
-    b.status === 'waiting_for_action'
+    b.status === 'waiting_for_action' // waiting_for_action kept for backwards-compatibility with legacy data
 
   const isRoomLive = (roomName) => bookings.some(b =>
     isActive(b) && b.room === roomName && b.date === todayStr &&

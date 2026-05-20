@@ -3,7 +3,7 @@ import {
   ArrowLeft, Eye, EyeOff, Loader2, Trash2, Lock,
   CalendarDays, Building2, Mail, User, AlertTriangle, CheckCircle2,
   Bell, Clock, RotateCcw, History, CheckCheck,
-  AlertCircle, Briefcase, DoorOpen, X,
+  AlertCircle, Briefcase, DoorOpen, X, ThumbsUp, ThumbsDown,
 } from 'lucide-react'
 import RescheduleInline from '../components/RescheduleInline'
 import {
@@ -56,20 +56,26 @@ function authErrMsg(code) {
 }
 
 const STATUS_CONFIG = {
-  approved:           { label: 'Approved',         cls: 'bg-green-100 text-green-700'       },
-  priority_pending:   { label: 'Priority Pending',  cls: 'bg-amber-100 text-amber-700'       },
-  waiting_for_action: { label: 'Action Needed',     cls: 'bg-red-100 text-red-600'           },
-  rescheduled:        { label: 'Rescheduled',        cls: 'bg-blue-100 text-blue-700'         },
-  cancelled:          { label: 'Cancelled',          cls: 'bg-neutral-100 text-neutral-500'  },
-  pending:            { label: 'Pending',            cls: 'bg-neutral-100 text-neutral-500'  },
+  approved:                    { label: 'Approved',          cls: 'bg-green-100 text-green-700'      },
+  pending_priority_approval:   { label: 'Awaiting Approval', cls: 'bg-amber-100 text-amber-700'      },
+  // legacy statuses kept for backwards-compatibility with existing Firestore data
+  priority_pending:            { label: 'Priority Pending',  cls: 'bg-amber-100 text-amber-700'      },
+  waiting_for_action:          { label: 'Action Needed',     cls: 'bg-red-100 text-red-600'          },
+  rescheduled:                 { label: 'Rescheduled',       cls: 'bg-blue-100 text-blue-700'        },
+  cancelled:                   { label: 'Cancelled',         cls: 'bg-neutral-100 text-neutral-500'  },
+  rejected:                    { label: 'Rejected',          cls: 'bg-red-100 text-red-600'          },
+  pending:                     { label: 'Pending',           cls: 'bg-neutral-100 text-neutral-500'  },
 }
 
 const HISTORY_ACTIONS = {
-  created:             { label: 'Created',            cls: 'bg-green-100 text-green-700'  },
-  priority_created:    { label: 'Priority Requested', cls: 'bg-amber-100 text-amber-700'  },
-  approved:            { label: 'Approved',           cls: 'bg-green-100 text-green-700'  },
-  deleted_with_reason: { label: 'Deleted',            cls: 'bg-red-100 text-red-600'      },
-  rescheduled:         { label: 'Rescheduled',        cls: 'bg-blue-100 text-blue-700'    },
+  created:             { label: 'Created',            cls: 'bg-green-100 text-green-700'     },
+  priority_created:    { label: 'Priority Requested', cls: 'bg-amber-100 text-amber-700'     },
+  partial_approved:    { label: 'Partially Approved', cls: 'bg-yellow-100 text-yellow-700'   },
+  approved:            { label: 'Approved',           cls: 'bg-green-100 text-green-700'     },
+  rejected:            { label: 'Rejected',           cls: 'bg-red-100 text-red-600'         },
+  withdrawn:           { label: 'Withdrawn',          cls: 'bg-neutral-100 text-neutral-500' },
+  deleted_with_reason: { label: 'Deleted',            cls: 'bg-red-100 text-red-600'         },
+  rescheduled:         { label: 'Rescheduled',        cls: 'bg-blue-100 text-blue-700'       },
   cancelled:           { label: 'Cancelled',          cls: 'bg-neutral-100 text-neutral-500' },
 }
 
@@ -225,6 +231,7 @@ export default function Profile({
   onNavigate, onLogout, bookings = [], deleteBooking, user,
   notifications = [], meetingHistory = [], markNotificationRead,
   deleteBookingWithReason, rescheduleBooking, cancelClientBooking,
+  approvePriorityRequest, rejectPriorityRequest,
   rooms = [], settings = {},
 }) {
   // Password change
@@ -246,7 +253,9 @@ export default function Profile({
   const [deleteError,   setDeleteError]   = useState('')
 
   // Inline action UI state (keyed by booking id)
-  const [activeAction, setActiveAction] = useState(null) // { id, type: 'reschedule' | 'delete' }
+  const [activeAction,   setActiveAction]   = useState(null) // { id, type: 'reschedule' | 'delete' | 'withdraw' }
+  // Per-notification approval state
+  const [approvalState,  setApprovalState]  = useState({})   // { [notifId]: 'approving' | 'rejecting' | 'done' | Error }
 
   const myMeetings = bookings
     .filter(b => b.ownerEmail === user.email)
@@ -302,13 +311,17 @@ export default function Profile({
   const typeColor = {
     priority_request:    'bg-amber-500',
     meeting_approved:    'bg-green-500',
+    priority_rejected:   'bg-red-600',
+    priority_withdrawn:  'bg-neutral-500',
     meeting_cancelled:   'bg-red-500',
     meeting_rescheduled: 'bg-blue-500',
     admin_override:      'bg-red-700',
   }
   const typeLabel = {
-    priority_request:    '⚡ Priority Request',
+    priority_request:    '⚡ Approval Required',
     meeting_approved:    '✓ Meeting Approved',
+    priority_rejected:   '✕ Request Rejected',
+    priority_withdrawn:  '↩ Request Withdrawn',
     meeting_cancelled:   '✕ Cancelled',
     meeting_rescheduled: '↗ Rescheduled',
     admin_override:      '⚠ Deleted by Admin',
@@ -385,40 +398,102 @@ export default function Profile({
           </div>
         ) : (
           <div className="divide-y divide-neutral-100">
-            {notifications.slice(0, 20).map(n => (
-              <div
-                key={n.id}
-                className={`px-6 py-4 flex items-start gap-4 ${!n.read ? 'bg-blue-50/40' : ''}`}
-              >
-                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-2 ${n.read ? 'bg-transparent' : 'bg-blue-500'}`} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full text-white ${typeColor[n.type] ?? 'bg-neutral-400'}`}>
-                      {typeLabel[n.type] ?? n.type}
-                    </span>
-                    <span className="text-[10px] text-neutral-400">{timeAgo(n.createdAt)}</span>
+            {notifications.slice(0, 20).map(n => {
+              const aState = approvalState[n.id]
+              // For priority_request notifications, look up the related booking to
+              // verify it is still pending (stale if already approved/rejected/withdrawn)
+              const relatedBooking = n.type === 'priority_request'
+                ? bookings.find(b => b.id === n.relatedBookingId)
+                : null
+              const isPriorityStillPending = relatedBooking?.status === 'pending_priority_approval'
+              const isPriorityResolved     = n.type === 'priority_request' && !isPriorityStillPending && relatedBooking !== undefined
+
+              return (
+                <div
+                  key={n.id}
+                  className={`px-6 py-4 flex items-start gap-4 ${!n.read ? 'bg-blue-50/40' : ''}`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-2 ${n.read ? 'bg-transparent' : 'bg-blue-500'}`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full text-white ${typeColor[n.type] ?? 'bg-neutral-400'}`}>
+                        {typeLabel[n.type] ?? n.type}
+                      </span>
+                      <span className="text-[10px] text-neutral-400">{timeAgo(n.createdAt)}</span>
+                    </div>
+                    <p className="text-[13px] font-medium text-black">{n.message}</p>
+                    {n.existingMeetingTitle && (
+                      <p className="text-[11px] text-neutral-500 mt-0.5">
+                        Your meeting: &ldquo;{n.existingMeetingTitle}&rdquo; · {n.room} · {n.date}
+                        {n.startMinutes != null && ` · ${minsToAmPm(n.startMinutes)}–${minsToAmPm(n.endMinutes)}`}
+                      </p>
+                    )}
+                    {n.clientName && (
+                      <p className="text-[11px] text-amber-700 mt-0.5 font-medium">Client: {n.clientName}</p>
+                    )}
+
+                    {/* ── Approve / Reject actions for active priority requests ── */}
+                    {n.type === 'priority_request' && !n.read && isPriorityStillPending && aState !== 'done' && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          disabled={!!aState}
+                          onClick={async () => {
+                            setApprovalState(s => ({ ...s, [n.id]: 'approving' }))
+                            try {
+                              await approvePriorityRequest?.(n.relatedBookingId, n.bookingId, user.email)
+                              await markNotificationRead?.(n.id)
+                              setApprovalState(s => ({ ...s, [n.id]: 'done' }))
+                            } catch (err) {
+                              setApprovalState(s => ({ ...s, [n.id]: null }))
+                            }
+                          }}
+                          className="flex items-center gap-1.5 px-3.5 py-2 bg-green-500 text-white text-[12px] font-bold rounded-xl hover:bg-green-600 transition-colors disabled:opacity-60"
+                        >
+                          {aState === 'approving'
+                            ? <Loader2 size={12} className="animate-spin" />
+                            : <ThumbsUp size={12} />}
+                          Approve Override
+                        </button>
+                        <button
+                          disabled={!!aState}
+                          onClick={async () => {
+                            setApprovalState(s => ({ ...s, [n.id]: 'rejecting' }))
+                            try {
+                              await rejectPriorityRequest?.(n.relatedBookingId, user.email)
+                              await markNotificationRead?.(n.id)
+                              setApprovalState(s => ({ ...s, [n.id]: 'done' }))
+                            } catch (err) {
+                              setApprovalState(s => ({ ...s, [n.id]: null }))
+                            }
+                          }}
+                          className="flex items-center gap-1.5 px-3.5 py-2 bg-red-500 text-white text-[12px] font-bold rounded-xl hover:bg-red-600 transition-colors disabled:opacity-60"
+                        >
+                          {aState === 'rejecting'
+                            ? <Loader2 size={12} className="animate-spin" />
+                            : <ThumbsDown size={12} />}
+                          Reject Request
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Stale notification: priority request no longer pending */}
+                    {isPriorityResolved && !n.read && (
+                      <p className="mt-2 text-[11px] text-neutral-400 font-medium italic">
+                        This request has already been resolved. No action needed.
+                      </p>
+                    )}
                   </div>
-                  <p className="text-[13px] font-medium text-black">{n.message}</p>
-                  {n.existingMeetingTitle && (
-                    <p className="text-[11px] text-neutral-500 mt-0.5">
-                      Your meeting: &ldquo;{n.existingMeetingTitle}&rdquo; · {n.room} · {n.date}
-                      {n.startMinutes != null && ` · ${minsToAmPm(n.startMinutes)}–${minsToAmPm(n.endMinutes)}`}
-                    </p>
-                  )}
-                  {n.clientName && (
-                    <p className="text-[11px] text-amber-700 mt-0.5 font-medium">Client: {n.clientName}</p>
+                  {!n.read && aState !== 'approving' && aState !== 'rejecting' && (
+                    <button
+                      onClick={() => markNotificationRead?.(n.id)}
+                      className="text-[11px] text-neutral-400 hover:text-black transition-colors font-semibold flex-shrink-0"
+                    >
+                      Dismiss
+                    </button>
                   )}
                 </div>
-                {!n.read && (
-                  <button
-                    onClick={() => markNotificationRead?.(n.id)}
-                    className="text-[11px] text-neutral-400 hover:text-black transition-colors font-semibold flex-shrink-0"
-                  >
-                    Dismiss
-                  </button>
-                )}
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
@@ -442,8 +517,11 @@ export default function Profile({
             {myMeetings.map(b => {
               const statusInfo        = STATUS_CONFIG[b.status]
               const isWaiting         = b.status === 'waiting_for_action'
-              const isPriorityPending = b.status === 'priority_pending' && b.meetingType === 'client'
+              const isPriorityPending = (b.status === 'pending_priority_approval' || b.status === 'priority_pending') && b.meetingType === 'client'
               const isOpen            = activeAction?.id === b.id
+              // How many approvals received vs total needed
+              const approvedCount     = isPriorityPending ? (b.approvedConflictIds?.length ?? 0) : 0
+              const totalConflicts    = isPriorityPending ? (b.conflictsWithIds?.length ?? 0) : 0
 
               return (
                 <div key={b.id} className={`px-4 sm:px-6 py-4 transition-colors ${isWaiting ? 'bg-red-50/30' : isPriorityPending ? 'bg-amber-50/30' : 'hover:bg-neutral-50'}`}>
@@ -492,11 +570,13 @@ export default function Profile({
                     </p>
                   )}
 
-                  {/* Pending approval hint — priority_pending client meeting */}
+                  {/* Pending approval hint — pending_priority_approval client meeting */}
                   {isPriorityPending && !isOpen && (
-                    <p className="mt-2 text-[11px] text-amber-600 font-medium flex items-center gap-1">
+                    <p className="mt-2 text-[11px] text-amber-600 font-medium flex items-center gap-1.5">
                       <AlertCircle size={11} />
-                      This client meeting is awaiting approval. You can withdraw it before it gets approved.
+                      Awaiting approval from {totalConflicts} owner{totalConflicts !== 1 ? 's' : ''}.
+                      {totalConflicts > 0 && approvedCount > 0 && ` ${approvedCount}/${totalConflicts} approved so far.`}
+                      {' '}You can withdraw before consensus.
                     </p>
                   )}
 

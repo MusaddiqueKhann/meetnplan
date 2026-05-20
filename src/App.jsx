@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc,
-  query, where, serverTimestamp, writeBatch,
+  query, where, serverTimestamp, writeBatch, runTransaction,
 } from 'firebase/firestore'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { Zap } from 'lucide-react'
@@ -160,32 +160,31 @@ export default function App() {
     } catch (_) {}
   }, [])
 
-  // Smart booking — handles normal bookings and client-meeting priority flow
+  // ── Priority Approval Logic ───────────────────────────────────────────────
+
+  // Smart booking — normal bookings get approved immediately.
+  // Client meetings that conflict with existing confirmed bookings enter the
+  // pending_priority_approval flow: they are invisible in all calendar/dashboard
+  // views and require explicit approval from each conflicting meeting owner.
   const bookWithPriority = useCallback(async (booking) => {
     const { conflictsWith, ...bookingData } = booking
-    // conflictsWith is now an array of all conflicting bookings
     const conflicts = Array.isArray(conflictsWith) ? conflictsWith : (conflictsWith ? [conflictsWith] : [])
 
     if (booking.meetingType === 'client' && conflicts.length > 0) {
-      // Client meeting that conflicts with existing bookings → priority flow
       const batch  = writeBatch(db)
       const newRef = doc(collection(db, 'bookings'))
       const newId  = newRef.id
 
       batch.set(newRef, {
         ...bookingData,
-        status:           'priority_pending',
-        conflictsWithIds: conflicts.map(c => c.id),
-        createdAt:        serverTimestamp(),
+        // INVARIANT: existing confirmed meetings MUST NOT be altered until this
+        // request receives 100% approval. They stay 'approved' and visible.
+        status:              'pending_priority_approval',
+        conflictsWithIds:    conflicts.map(c => c.id),
+        approvedConflictIds: [],
+        createdAt:           serverTimestamp(),
       })
-
-      for (const conflict of conflicts) {
-        batch.update(doc(db, 'bookings', conflict.id), {
-          status:             'waiting_for_action',
-          priorityRequestId:  newId,
-          waitingForActionAt: serverTimestamp(),
-        })
-      }
+      // Existing meetings are NOT changed — they remain 'approved' and fully visible.
       await batch.commit()
 
       for (const conflict of conflicts) {
@@ -196,7 +195,7 @@ export default function App() {
           fromName:             bookingData.coordinator,
           fromCompany:          bookingData.companyName,
           type:                 'priority_request',
-          message:              `Your meeting "${conflict.title}" conflicts with the high-priority client meeting "${bookingData.title}". Please reschedule or cancel your meeting to accommodate this booking.`,
+          message:              `A high-priority client meeting "${bookingData.title}" is requesting your slot. Please approve or reject this override request.`,
           bookingId:            conflict.id,
           relatedBookingId:     newId,
           clientName:           bookingData.clientName ?? '',
@@ -226,7 +225,7 @@ export default function App() {
         reason:           null,
       })
     } else {
-      // Normal booking
+      // Normal booking — approved immediately
       const batch  = writeBatch(db)
       const newRef = doc(collection(db, 'bookings'))
       const newId  = newRef.id
@@ -250,38 +249,247 @@ export default function App() {
     }
   }, [sendNotification, logHistory])
 
-  // Delete a booking with a mandatory reason, then auto-approve the pending client meeting
-  // if this was the last remaining conflict blocking it
-  const deleteBookingWithReason = useCallback(async (booking, reason) => {
-    const batch = writeBatch(db)
-    batch.delete(doc(db, 'bookings', booking.id))
+  // Called when a conflicting meeting owner explicitly approves the override.
+  // Uses a Firestore transaction for race-condition safety (spec §6 edge case).
+  // All-or-nothing: the client meeting is only CONFIRMED when every conflict owner approves.
+  const approvePriorityRequest = useCallback(async (priorityBookingId, conflictingBookingId, approvingUserEmail) => {
+    let fullyApproved = false
+    let priorityData  = null
 
-    // Check if there are other waiting_for_action bookings for the same client meeting
-    const remainingConflicts = booking.priorityRequestId
-      ? bookingsRef.current.filter(b =>
-          b.id !== booking.id &&
-          b.priorityRequestId === booking.priorityRequestId &&
-          b.status === 'waiting_for_action'
-        )
-      : []
-    const isLastConflict = booking.priorityRequestId && remainingConflicts.length === 0
+    await runTransaction(db, async (tx) => {
+      const pbSnap = await tx.get(doc(db, 'bookings', priorityBookingId))
+      if (!pbSnap.exists()) return
 
-    if (isLastConflict) {
-      batch.update(doc(db, 'bookings', booking.priorityRequestId), {
-        status:           'approved',
-        approvedAt:       serverTimestamp(),
-        conflictsWithIds: [],
+      const pb = pbSnap.data()
+      if (pb.status !== 'pending_priority_approval') return
+
+      const resolved = [...(pb.approvedConflictIds ?? []), conflictingBookingId]
+      const allDone  = (pb.conflictsWithIds ?? []).every(id => resolved.includes(id))
+
+      if (allDone) {
+        // FULL CONSENSUS — confirm the client meeting and cancel all conflicting meetings
+        tx.update(doc(db, 'bookings', priorityBookingId), {
+          status:              'approved',
+          approvedAt:          serverTimestamp(),
+          approvedConflictIds: resolved,
+          conflictsWithIds:    [],
+        })
+        for (const cId of (pb.conflictsWithIds ?? [])) {
+          // Only cancel meetings that still exist and still overlap the priority slot
+          const conflict = bookingsRef.current.find(b => b.id === cId)
+          if (conflict && conflict.status === 'approved') {
+            const stillOverlaps = conflict.date === pb.date &&
+              conflict.startMinutes < pb.endMinutes &&
+              conflict.endMinutes > pb.startMinutes
+            if (stillOverlaps) {
+              tx.update(doc(db, 'bookings', cId), {
+                status:               'cancelled',
+                cancelledAt:          serverTimestamp(),
+                cancelledByPriorityId: priorityBookingId,
+              })
+            }
+          }
+        }
+        fullyApproved = true
+        priorityData  = { ...pb, id: priorityBookingId }
+      } else {
+        // Partial approval — record this conflict as resolved, wait for others
+        tx.update(doc(db, 'bookings', priorityBookingId), { approvedConflictIds: resolved })
+      }
+    })
+
+    // Dismiss the approver's own priority_request notification
+    const myNotif = notificationsRef.current.find(n =>
+      n.type === 'priority_request' && n.relatedBookingId === priorityBookingId && !n.read
+    )
+    if (myNotif?.id) await updateDoc(doc(db, 'notifications', myNotif.id), { read: true })
+
+    if (fullyApproved && priorityData) {
+      // Dismiss any remaining priority_request notifications from other approvers
+      // (their own dismissal happens when they open notifications next time)
+      await sendNotification({
+        toEmail:   priorityData.ownerEmail,
+        toUid:     priorityData.ownerUid ?? '',
+        fromEmail: approvingUserEmail,
+        type:      'meeting_approved',
+        message:   `Your client meeting "${priorityData.title}" has been fully approved — all conflicting owners accepted the override.`,
+        bookingId: priorityBookingId,
+      })
+      await logHistory({
+        bookingId:        priorityBookingId,
+        bookingTitle:     priorityData.title,
+        action:           'approved',
+        performedBy:      approvingUserEmail,
+        performedByEmail: approvingUserEmail,
+        meetingType:      'client',
+        clientName:       priorityData.clientName ?? '',
+        room:             priorityData.room,
+        date:             priorityData.date,
+        startMinutes:     priorityData.startMinutes,
+        endMinutes:       priorityData.endMinutes,
+        reason:           'All required approvals received',
       })
     }
+  }, [sendNotification, logHistory])
+
+  // Called when a conflicting meeting owner rejects the override.
+  // Instant rejection: the entire priority request is rejected immediately,
+  // regardless of other owners who may have already approved.
+  const rejectPriorityRequest = useCallback(async (priorityBookingId, rejectingUserEmail, autoRejectReason = null) => {
+    const pb = bookingsRef.current.find(b => b.id === priorityBookingId)
+    if (!pb || pb.status !== 'pending_priority_approval') return
+
+    const batch = writeBatch(db)
+    batch.update(doc(db, 'bookings', priorityBookingId), {
+      status:     'rejected',
+      rejectedAt: serverTimestamp(),
+      rejectedBy: rejectingUserEmail,
+    })
     await batch.commit()
 
-    // Auto-dismiss the priority_request notification for this booking
-    const prNotif = notificationsRef.current.find(n =>
-      n.type === 'priority_request' && n.bookingId === booking.id && !n.read
+    // Dismiss this user's own priority_request notification
+    const myNotif = notificationsRef.current.find(n =>
+      n.type === 'priority_request' && n.relatedBookingId === priorityBookingId && !n.read
     )
-    if (prNotif?.id) {
-      await updateDoc(doc(db, 'notifications', prNotif.id), { read: true })
+    if (myNotif?.id) await updateDoc(doc(db, 'notifications', myNotif.id), { read: true })
+
+    const isAutoTimeout = rejectingUserEmail === 'system'
+    const message = isAutoTimeout
+      ? `Your client meeting "${pb.title}" was automatically rejected — no response was received before the 15-minute deadline.`
+      : `Your client meeting "${pb.title}" request was rejected by ${rejectingUserEmail}. The requested time slot remains occupied.`
+
+    await sendNotification({
+      toEmail:   pb.ownerEmail,
+      toUid:     pb.ownerUid ?? '',
+      fromEmail: rejectingUserEmail,
+      type:      'priority_rejected',
+      message,
+      bookingId: priorityBookingId,
+    })
+
+    await logHistory({
+      bookingId:        priorityBookingId,
+      bookingTitle:     pb.title,
+      action:           'rejected',
+      performedBy:      rejectingUserEmail,
+      performedByEmail: rejectingUserEmail,
+      meetingType:      'client',
+      clientName:       pb.clientName ?? '',
+      room:             pb.room,
+      date:             pb.date,
+      startMinutes:     pb.startMinutes,
+      endMinutes:       pb.endMinutes,
+      reason:           autoRejectReason ?? `Rejected by ${rejectingUserEmail}`,
+    })
+  }, [sendNotification, logHistory])
+
+  // Self-cancellation edge case: when a booking is deleted, check if it was
+  // the last conflict blocking a pending priority request. If so, auto-approve.
+  const checkAndAutoApprovePriority = useCallback(async (deletedBookingId) => {
+    const affected = bookingsRef.current.filter(b =>
+      b.status === 'pending_priority_approval' &&
+      Array.isArray(b.conflictsWithIds) &&
+      b.conflictsWithIds.includes(deletedBookingId)
+    )
+    if (!affected.length) return
+
+    const batch       = writeBatch(db)
+    const autoApproved = []
+
+    for (const pb of affected) {
+      const resolved = [...(pb.approvedConflictIds ?? []), deletedBookingId]
+      const allDone  = pb.conflictsWithIds.every(id => resolved.includes(id))
+
+      if (allDone) {
+        batch.update(doc(db, 'bookings', pb.id), {
+          status:              'approved',
+          approvedAt:          serverTimestamp(),
+          approvedConflictIds: resolved,
+          conflictsWithIds:    [],
+        })
+        // Cancel any remaining active conflicting meetings (e.g. those that
+        // explicitly approved but weren't yet cancelled)
+        for (const cId of pb.conflictsWithIds) {
+          if (cId === deletedBookingId) continue
+          const existing = bookingsRef.current.find(b => b.id === cId && b.status === 'approved')
+          if (existing) {
+            const stillOverlaps = existing.date === pb.date &&
+              existing.startMinutes < pb.endMinutes &&
+              existing.endMinutes > pb.startMinutes
+            if (stillOverlaps) {
+              batch.update(doc(db, 'bookings', cId), {
+                status:                'cancelled',
+                cancelledAt:           serverTimestamp(),
+                cancelledByPriorityId: pb.id,
+              })
+            }
+          }
+        }
+        autoApproved.push(pb)
+      } else {
+        batch.update(doc(db, 'bookings', pb.id), { approvedConflictIds: resolved })
+      }
     }
+
+    await batch.commit()
+
+    for (const pb of autoApproved) {
+      await sendNotification({
+        toEmail:   pb.ownerEmail,
+        toUid:     pb.ownerUid ?? '',
+        type:      'meeting_approved',
+        message:   `Your client meeting "${pb.title}" has been approved — all conflicting meetings have been resolved.`,
+        bookingId: pb.id,
+      })
+      await logHistory({
+        bookingId:    pb.id,
+        bookingTitle: pb.title,
+        action:       'approved',
+        room:         pb.room,
+        date:         pb.date,
+        startMinutes: pb.startMinutes,
+        endMinutes:   pb.endMinutes,
+        reason:       'Auto-approved: all conflicting meetings resolved',
+      })
+    }
+  }, [sendNotification, logHistory])
+
+  // Auto-reject pending_priority_approval requests 15 minutes before their
+  // start time to prevent deadlocks when owners fail to respond.
+  useEffect(() => {
+    if (!firebaseUser) return
+    const checkTimeouts = async () => {
+      const nowMs    = Date.now()
+      const deadline = 15 * 60 * 1000
+      const expired  = bookingsRef.current.filter(b => {
+        if (b.status !== 'pending_priority_approval') return false
+        const parts = (b.date || '').split('-').map(Number)
+        if (parts.length < 3 || !parts[0]) return false
+        const startMs = new Date(parts[0], parts[1] - 1, parts[2], 0, b.startMinutes ?? 0).getTime()
+        return nowMs >= startMs - deadline
+      })
+      for (const pb of expired) {
+        await rejectPriorityRequest(pb.id, 'system', 'Auto-rejected: approval deadline passed (15 min before meeting start)')
+      }
+    }
+    const id = setInterval(checkTimeouts, 60_000)
+    checkTimeouts()
+    return () => clearInterval(id)
+  }, [firebaseUser?.uid, rejectPriorityRequest])
+
+  // ── Booking CRUD ──────────────────────────────────────────────────────────
+
+  // Delete a booking. Triggers self-cancellation detection for any pending
+  // priority requests that listed this booking as a conflict.
+  const deleteBooking = useCallback(async (id) => {
+    await deleteDoc(doc(db, 'bookings', id))
+    await checkAndAutoApprovePriority(id)
+  }, [checkAndAutoApprovePriority])
+
+  // Delete a booking with a mandatory reason (used from Profile "My Meetings").
+  // Also triggers self-cancellation detection.
+  const deleteBookingWithReason = useCallback(async (booking, reason) => {
+    await deleteDoc(doc(db, 'bookings', booking.id))
 
     await logHistory({
       bookingId:        booking.id,
@@ -296,48 +504,13 @@ export default function App() {
       reason,
     })
 
-    if (isLastConflict) {
-      const clientMeeting = bookingsRef.current.find(b => b.id === booking.priorityRequestId)
-      if (clientMeeting) {
-        await sendNotification({
-          toEmail:          clientMeeting.ownerEmail,
-          toUid:            clientMeeting.ownerUid ?? '',
-          fromEmail:        booking.ownerEmail,
-          fromName:         booking.coordinator,
-          type:             'meeting_approved',
-          message:          'Your client meeting has been approved — all conflicting meetings have been resolved.',
-          bookingId:        clientMeeting.id,
-          relatedBookingId: booking.id,
-        })
-        await logHistory({
-          bookingId:        clientMeeting.id,
-          bookingTitle:     clientMeeting.title,
-          action:           'approved',
-          performedBy:      booking.coordinator,
-          performedByEmail: booking.ownerEmail,
-          room:             clientMeeting.room,
-          date:             clientMeeting.date,
-          startMinutes:     clientMeeting.startMinutes,
-          endMinutes:       clientMeeting.endMinutes,
-          reason:           'All conflicting meetings resolved by owners',
-        })
-      }
-    }
-  }, [logHistory, sendNotification])
+    await checkAndAutoApprovePriority(booking.id)
+  }, [logHistory, checkAndAutoApprovePriority])
 
-  // Reschedule a booking to a new slot, then auto-approve the pending client meeting
-  // if this was the last remaining conflict blocking it
+  // Reschedule a booking to a new slot.
+  // Note: rescheduling alone is NOT an approval action — owners must still
+  // explicitly approve or reject any pending priority requests via their inbox.
   const rescheduleBooking = useCallback(async (booking, newData) => {
-    // Check if there are other waiting_for_action bookings for the same client meeting
-    const remainingConflicts = booking.priorityRequestId
-      ? bookingsRef.current.filter(b =>
-          b.id !== booking.id &&
-          b.priorityRequestId === booking.priorityRequestId &&
-          b.status === 'waiting_for_action'
-        )
-      : []
-    const isLastConflict = booking.priorityRequestId && remainingConflicts.length === 0
-
     const batch = writeBatch(db)
     batch.update(doc(db, 'bookings', booking.id), {
       ...newData,
@@ -345,23 +518,14 @@ export default function App() {
       rescheduledAt:     serverTimestamp(),
       priorityRequestId: null,
     })
-
-    if (isLastConflict) {
-      batch.update(doc(db, 'bookings', booking.priorityRequestId), {
-        status:           'approved',
-        approvedAt:       serverTimestamp(),
-        conflictsWithIds: [],
-      })
-    }
     await batch.commit()
 
-    // Auto-dismiss the priority_request notification for this booking
+    // Auto-dismiss any priority_request notification for this booking since the
+    // user has already taken action on the conflicting slot
     const prNotif = notificationsRef.current.find(n =>
       n.type === 'priority_request' && n.bookingId === booking.id && !n.read
     )
-    if (prNotif?.id) {
-      await updateDoc(doc(db, 'notifications', prNotif.id), { read: true })
-    }
+    if (prNotif?.id) await updateDoc(doc(db, 'notifications', prNotif.id), { read: true })
 
     await logHistory({
       bookingId:        booking.id,
@@ -379,56 +543,12 @@ export default function App() {
       newRoom:          newData.room,
       reason:           null,
     })
+  }, [logHistory])
 
-    if (isLastConflict) {
-      const clientMeeting = bookingsRef.current.find(b => b.id === booking.priorityRequestId)
-      if (clientMeeting) {
-        await sendNotification({
-          toEmail:          clientMeeting.ownerEmail,
-          toUid:            clientMeeting.ownerUid ?? '',
-          fromEmail:        booking.ownerEmail,
-          fromName:         booking.coordinator,
-          type:             'meeting_approved',
-          message:          'Your client meeting has been approved — all conflicting meetings have been resolved.',
-          bookingId:        clientMeeting.id,
-          relatedBookingId: booking.id,
-        })
-        await logHistory({
-          bookingId:        clientMeeting.id,
-          bookingTitle:     clientMeeting.title,
-          action:           'approved',
-          performedBy:      booking.coordinator,
-          performedByEmail: booking.ownerEmail,
-          room:             clientMeeting.room,
-          date:             clientMeeting.date,
-          startMinutes:     clientMeeting.startMinutes,
-          endMinutes:       clientMeeting.endMinutes,
-          reason:           'All conflicting meetings resolved by owners',
-        })
-      }
-    }
-  }, [logHistory, sendNotification])
-
-  // Admin forcefully removes one stale "waiting_for_action" meeting.
-  // Client meeting is only approved when this is the last conflict blocking it.
+  // Admin forcefully removes a booking that conflicts with a pending priority
+  // request. Deletion triggers checkAndAutoApprovePriority automatically.
   const adminOverrideApprove = useCallback(async (conflictingBooking, clientBooking) => {
-    const remainingConflicts = bookingsRef.current.filter(b =>
-      b.id !== conflictingBooking.id &&
-      b.priorityRequestId === clientBooking.id &&
-      b.status === 'waiting_for_action'
-    )
-    const isLastConflict = remainingConflicts.length === 0
-
-    const batch = writeBatch(db)
-    batch.delete(doc(db, 'bookings', conflictingBooking.id))
-    if (isLastConflict) {
-      batch.update(doc(db, 'bookings', clientBooking.id), {
-        status:           'approved',
-        approvedAt:       serverTimestamp(),
-        conflictsWithIds: [],
-      })
-    }
-    await batch.commit()
+    await deleteDoc(doc(db, 'bookings', conflictingBooking.id))
 
     await sendNotification({
       toEmail:          conflictingBooking.ownerEmail,
@@ -436,7 +556,7 @@ export default function App() {
       fromEmail:        'admin',
       fromName:         'Admin',
       type:             'admin_override',
-      message:          'Your meeting has been deleted by the admin because it was clashing with a client meeting.',
+      message:          'Your meeting has been removed by the admin to accommodate a priority client meeting.',
       bookingId:        conflictingBooking.id,
       relatedBookingId: clientBooking.id,
       room:             conflictingBooking.room,
@@ -455,58 +575,37 @@ export default function App() {
       date:             conflictingBooking.date,
       startMinutes:     conflictingBooking.startMinutes,
       endMinutes:       conflictingBooking.endMinutes,
-      reason:           'Admin override — meeting was clashing with a client meeting and owner did not act within 5 minutes of the priority request being created.',
+      reason:           'Admin override — removed to accommodate a priority client meeting.',
     })
 
-    if (isLastConflict) {
-      await logHistory({
-        bookingId:        clientBooking.id,
-        bookingTitle:     clientBooking.title,
-        action:           'approved',
-        performedBy:      'Admin',
-        performedByEmail: firebaseUser?.email ?? 'admin',
-        room:             clientBooking.room,
-        date:             clientBooking.date,
-        startMinutes:     clientBooking.startMinutes,
-        endMinutes:       clientBooking.endMinutes,
-        reason:           'Admin override — all conflicting meetings deleted by admin.',
-      })
-    }
-  }, [sendNotification, logHistory, firebaseUser?.email])
+    await checkAndAutoApprovePriority(conflictingBooking.id)
+  }, [sendNotification, logHistory, checkAndAutoApprovePriority, firebaseUser?.email])
 
-  // Owner withdraws their own priority_pending client meeting before approval.
-  // Restores all affected waiting_for_action bookings back to approved.
+  // Owner withdraws their own pending_priority_approval meeting before consensus.
+  // Existing confirmed meetings are untouched (they were never altered).
   const cancelClientBooking = useCallback(async (booking) => {
     const batch = writeBatch(db)
     batch.delete(doc(db, 'bookings', booking.id))
-
-    const rawIds = Array.isArray(booking.conflictsWithIds)
-      ? booking.conflictsWithIds
-      : booking.conflictsWithId ? [booking.conflictsWithId] : []
-    const conflictIds = rawIds.filter(id => typeof id === 'string' && id.length > 0)
-
-    const affected = bookingsRef.current.filter(b =>
-      typeof b.id === 'string' && b.id.length > 0 &&
-      (conflictIds.includes(b.id) || b.priorityRequestId === booking.id)
-    )
-    for (const cb of affected) {
-      batch.update(doc(db, 'bookings', cb.id), {
-        status:             'approved',
-        priorityRequestId:  null,
-        waitingForActionAt: null,
-      })
-    }
     await batch.commit()
 
-    for (const cb of affected) {
+    // Notify all approvers that the request has been withdrawn
+    const conflictIds = Array.isArray(booking.conflictsWithIds)
+      ? booking.conflictsWithIds
+      : booking.conflictsWithId ? [booking.conflictsWithId] : []
+    const approverEmails = [...new Set(
+      bookingsRef.current
+        .filter(b => conflictIds.includes(b.id))
+        .map(b => b.ownerEmail)
+        .filter(Boolean)
+    )]
+    for (const email of approverEmails) {
       await sendNotification({
-        toEmail:          cb.ownerEmail,
-        toUid:            cb.ownerUid ?? '',
+        toEmail:          email,
         fromEmail:        booking.ownerEmail,
         fromName:         booking.coordinator,
-        type:             'meeting_approved',
-        message:          `${booking.coordinator} has withdrawn their client meeting request "${booking.title}". Your booking is confirmed.`,
-        bookingId:        cb.id,
+        type:             'priority_withdrawn',
+        message:          `The priority client meeting request "${booking.title}" has been withdrawn by ${booking.coordinator}. No action needed from you.`,
+        bookingId:        booking.id,
         relatedBookingId: booking.id,
       })
     }
@@ -514,7 +613,7 @@ export default function App() {
     await logHistory({
       bookingId:        booking.id,
       bookingTitle:     booking.title,
-      action:           'deleted_with_reason',
+      action:           'withdrawn',
       performedBy:      booking.coordinator,
       performedByEmail: booking.ownerEmail,
       meetingType:      'client',
@@ -523,7 +622,7 @@ export default function App() {
       date:             booking.date,
       startMinutes:     booking.startMinutes,
       endMinutes:       booking.endMinutes,
-      reason:           'Client meeting withdrawn by owner before approval',
+      reason:           'Priority request withdrawn by owner before approval',
     })
   }, [logHistory, sendNotification])
 
@@ -535,10 +634,6 @@ export default function App() {
     const unread = notifications.filter(n => !n.read)
     await Promise.all(unread.map(n => updateDoc(doc(db, 'notifications', n.id), { read: true })))
   }, [notifications])
-
-  const deleteBooking = useCallback(async (id) => {
-    await deleteDoc(doc(db, 'bookings', id))
-  }, [])
 
   const addRoom    = async (room)     => { const { id, ...data } = room; await addDoc(collection(db, 'rooms'), data) }
   const removeRoom = async (id)       => { await deleteDoc(doc(db, 'rooms', id)) }
@@ -575,7 +670,7 @@ export default function App() {
     isGoogleUser: firebaseUser.providerData?.[0]?.providerId === 'google.com',
   }
 
-  const safePage   = (page === 'admin' && user.role !== 'admin') ? 'dashboard' : page
+  const safePage    = (page === 'admin' && user.role !== 'admin') ? 'dashboard' : page
   const unreadCount = notifications.filter(n => !n.read).length
 
   const sharedProps = { rooms, bookings, user, notifications, meetingHistory }
@@ -621,6 +716,8 @@ export default function App() {
         deleteBookingWithReason={deleteBookingWithReason}
         rescheduleBooking={rescheduleBooking}
         cancelClientBooking={cancelClientBooking}
+        approvePriorityRequest={approvePriorityRequest}
+        rejectPriorityRequest={rejectPriorityRequest}
         rooms={rooms}
         settings={settings}
       />

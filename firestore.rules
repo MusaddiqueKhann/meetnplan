@@ -38,11 +38,18 @@ service cloud.firestore {
       allow update: if isAuthenticated() && (
         resource.data.ownerEmail == request.auth.token.email ||
         isAdmin() ||
-        // Restoring a waiting_for_action booking to approved (conflict resolved or client withdrew)
+        // Any authenticated user can progress a priority approval (approve/reject/partial-approve)
+        resource.data.status == 'pending_priority_approval' ||
+        // Any authenticated user can cancel an approved meeting when a fully-approved priority
+        // request is doing the final atomic cancellation of conflicting meetings
+        (resource.data.status == 'approved' &&
+         request.resource.data.status == 'cancelled' &&
+         request.resource.data.cancelledByPriorityId != null) ||
+        // Legacy: restoring a waiting_for_action booking to approved
         (resource.data.status == 'waiting_for_action' &&
          request.resource.data.status == 'approved' &&
          request.resource.data.priorityRequestId == null) ||
-        // Approving a priority_pending booking when its last conflict is resolved
+        // Legacy: approving a priority_pending booking when its last conflict is resolved
         (resource.data.status == 'priority_pending' &&
          request.resource.data.status == 'approved')
       );

@@ -815,11 +815,14 @@ function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove
   }
 
   const STATUS_CONFIG = {
-    approved:           { label: 'Approved',         cls: 'bg-green-100 text-green-700'       },
-    priority_pending:   { label: 'Priority Pending',  cls: 'bg-amber-100 text-amber-700'       },
-    waiting_for_action: { label: 'Action Needed',     cls: 'bg-red-100 text-red-600'           },
-    rescheduled:        { label: 'Rescheduled',        cls: 'bg-blue-100 text-blue-700'         },
-    cancelled:          { label: 'Cancelled',          cls: 'bg-neutral-100 text-neutral-500'  },
+    approved:                  { label: 'Approved',          cls: 'bg-green-100 text-green-700'      },
+    pending_priority_approval: { label: 'Awaiting Approval', cls: 'bg-amber-100 text-amber-700'      },
+    // legacy statuses
+    priority_pending:          { label: 'Priority Pending',  cls: 'bg-amber-100 text-amber-700'      },
+    waiting_for_action:        { label: 'Action Needed',     cls: 'bg-red-100 text-red-600'          },
+    rescheduled:               { label: 'Rescheduled',       cls: 'bg-blue-100 text-blue-700'        },
+    cancelled:                 { label: 'Cancelled',         cls: 'bg-neutral-100 text-neutral-500'  },
+    rejected:                  { label: 'Rejected',          cls: 'bg-red-100 text-red-600'          },
   }
 
   const HISTORY_ACTIONS = {
@@ -850,7 +853,7 @@ function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove
 
   // KPIs
   const total         = bookings.filter(b => b.meetingType === 'client').length
-  const pending       = bookings.filter(b => b.meetingType === 'client' && b.status === 'priority_pending').length
+  const pending       = bookings.filter(b => b.meetingType === 'client' && (b.status === 'pending_priority_approval' || b.status === 'priority_pending')).length
   const approved      = bookings.filter(b => b.meetingType === 'client' && b.status === 'approved').length
   const rescheduled   = bookings.filter(b => b.meetingType === 'client' && b.status === 'rescheduled').length
   const waitingAction = bookings.filter(b => b.status === 'waiting_for_action').length
@@ -894,11 +897,13 @@ function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove
         {[
           { value: filterStatus,  onChange: setFilterStatus,  opts: [
             { v: 'all', l: 'All Statuses' },
-            { v: 'approved',           l: 'Approved'         },
-            { v: 'priority_pending',   l: 'Priority Pending'  },
-            { v: 'waiting_for_action', l: 'Action Needed'     },
-            { v: 'rescheduled',        l: 'Rescheduled'       },
-            { v: 'cancelled',          l: 'Cancelled'         },
+            { v: 'approved',                  l: 'Approved'          },
+            { v: 'pending_priority_approval', l: 'Awaiting Approval'  },
+            { v: 'rejected',                  l: 'Rejected'           },
+            { v: 'priority_pending',          l: 'Priority Pending'   },
+            { v: 'waiting_for_action',        l: 'Action Needed'      },
+            { v: 'rescheduled',               l: 'Rescheduled'        },
+            { v: 'cancelled',                 l: 'Cancelled'          },
           ]},
           { value: filterRoom, onChange: setFilterRoom, opts: [{ v: 'all', l: 'All Rooms' }, ...allRooms.map(r => ({ v: r, l: r }))] },
           { value: filterCompany, onChange: setFilterCompany, opts: [{ v: 'all', l: 'All Clients' }, ...allCompanies.map(c => ({ v: c, l: c }))] },
@@ -943,29 +948,35 @@ function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove
             const statusInfo = STATUS_CONFIG[b.status]
 
             const accentMap = {
-              priority_pending:   'border-l-amber-400   bg-amber-50/30',
-              waiting_for_action: 'border-l-red-400     bg-red-50/20',
-              approved:           'border-l-green-400   bg-white',
-              rescheduled:        'border-l-blue-400    bg-blue-50/20',
-              cancelled:          'border-l-neutral-300 bg-neutral-50/60',
+              pending_priority_approval: 'border-l-amber-400   bg-amber-50/30',
+              rejected:                  'border-l-red-300     bg-red-50/10',
+              approved:                  'border-l-green-400   bg-white',
+              rescheduled:               'border-l-blue-400    bg-blue-50/20',
+              cancelled:                 'border-l-neutral-300 bg-neutral-50/60',
+              // legacy
+              priority_pending:          'border-l-amber-400   bg-amber-50/30',
+              waiting_for_action:        'border-l-red-400     bg-red-50/20',
             }
             const dotMap = {
-              priority_pending:   'bg-amber-400',
-              waiting_for_action: 'bg-red-400',
-              approved:           'bg-green-400',
-              rescheduled:        'bg-blue-400',
-              cancelled:          'bg-neutral-300',
+              pending_priority_approval: 'bg-amber-400',
+              rejected:                  'bg-red-300',
+              approved:                  'bg-green-400',
+              rescheduled:               'bg-blue-400',
+              cancelled:                 'bg-neutral-300',
+              // legacy
+              priority_pending:          'bg-amber-400',
+              waiting_for_action:        'bg-red-400',
             }
             const accent = accentMap[b.status] ?? 'border-l-neutral-200 bg-white'
             const dot    = dotMap[b.status]    ?? 'bg-neutral-300'
 
             // --- Admin override logic (supports multiple conflicts) ---
-            const conflictIds = b.status === 'priority_pending'
+            const conflictIds = (b.status === 'pending_priority_approval' || b.status === 'priority_pending')
               ? (b.conflictsWithIds ?? (b.conflictsWithId ? [b.conflictsWithId] : []))
               : []
             const conflictingBookings = conflictIds
               .map(id => bookings.find(x => x.id === id))
-              .filter(x => x?.status === 'waiting_for_action')
+              .filter(x => x && x.status === 'approved')
 
             return (
               <div key={b.id} className="flex flex-col gap-0">

@@ -47,9 +47,10 @@ export default function TodaysMeetings({ onOpenModal, bookings = [], deleteBooki
   tomorrowDate.setDate(tomorrowDate.getDate() + 1)
   const tomorrowStr = dateStr(tomorrowDate)
 
+  // VISIBILITY RULE: pending_priority_approval meetings must not appear here.
   const isActive = (b) =>
     !b.status || b.status === 'approved' || b.status === 'rescheduled' ||
-    b.status === 'waiting_for_action'
+    b.status === 'waiting_for_action' // legacy: kept for backwards-compatibility
 
   const mapBooking = b => ({
     id:               b.id,
@@ -319,7 +320,7 @@ export default function TodaysMeetings({ onOpenModal, bookings = [], deleteBooki
                                   ? 'bg-[#F7F7F7] border border-[#E8E8E8] shadow-[inset_3px_0_0_#E0E0E0]'
                                   : meeting.status === 'waiting_for_action'
                                   ? 'bg-amber-50 border border-amber-200 shadow-[inset_3px_0_0_theme(colors.amber.400)]'
-                                  : meeting.status === 'priority_pending'
+                                  : (meeting.status === 'priority_pending' || meeting.status === 'pending_priority_approval')
                                   ? 'bg-orange-50 border border-orange-200 shadow-[inset_3px_0_0_theme(colors.orange.400)]'
                                   : 'bg-white border border-[#E5E5E5] hover:border-neutral-300 hover:shadow-sm shadow-[inset_3px_0_0_#DCDCF0]'
                                 }`}
@@ -337,12 +338,12 @@ export default function TodaysMeetings({ onOpenModal, bookings = [], deleteBooki
                                         <span className="text-[9px] font-extrabold uppercase tracking-widest text-amber-700">Action Needed</span>
                                       </span>
                                     )}
-                                    {!isPast && meeting.status === 'priority_pending' && (
+                                    {!isPast && (meeting.status === 'priority_pending' || meeting.status === 'pending_priority_approval') && (
                                       <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-orange-100 border border-orange-200 flex-shrink-0">
                                         <span className="text-[9px] font-extrabold uppercase tracking-widest text-orange-600">Pending Approval</span>
                                       </span>
                                     )}
-                                    {isUpcoming && meeting.status !== 'waiting_for_action' && meeting.status !== 'priority_pending' && (
+                                    {isUpcoming && meeting.status !== 'waiting_for_action' && meeting.status !== 'priority_pending' && meeting.status !== 'pending_priority_approval' && (
                                       <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-50 flex-shrink-0">
                                         <span className="text-[9px] font-extrabold uppercase tracking-widest text-indigo-400">Up Next</span>
                                       </span>

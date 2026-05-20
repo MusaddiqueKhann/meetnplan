@@ -25,6 +25,9 @@ function checkCooldown(form, bookings, userEmail) {
     b.ownerEmail === userEmail &&
     b.date === form.date &&
     b.status !== 'cancelled' &&
+    b.status !== 'rejected' &&
+    // pending_priority_approval meetings are invisible — exclude from cooldown check
+    b.status !== 'pending_priority_approval' &&
     b.status !== 'priority_pending' &&
     newStart > b.startMinutes &&
     (newStart - b.startMinutes) < 15
@@ -35,10 +38,14 @@ function checkConflicts(form, bookings) {
   if (!form.room || !form.date || !form.time || !form.duration) return []
   const newStart = toMinutes(form.time)
   const newEnd   = newStart + (DURATION_MINUTES[form.duration] || 0)
+  // VISIBILITY RULE: pending_priority_approval and rejected meetings must not
+  // participate in conflict detection (spec §2 — zero-visibility rule).
   return bookings.filter(b =>
     b.room === form.room &&
     b.date === form.date &&
     b.status !== 'cancelled' &&
+    b.status !== 'rejected' &&
+    b.status !== 'pending_priority_approval' &&
     b.status !== 'priority_pending' &&
     newStart < b.endMinutes &&
     newEnd   > b.startMinutes
