@@ -193,37 +193,35 @@ export default function Notifications({
                       }
                     </div>
 
-                    {/* Row 2 — message (desktop: inline with buttons via flex-row) */}
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-6">
-                      <p className="text-[13px] font-medium text-black leading-snug sm:flex-1 min-w-0">
-                        {n.message}
-                      </p>
-
-                      {/* Row 4 on mobile / inline on desktop — action buttons */}
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {isPriority && (
-                          <button
-                            onClick={e => { e.stopPropagation(); onNavigate?.('myMeetings') }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold rounded-xl transition-colors whitespace-nowrap shadow-sm"
-                          >
-                            View Action <ArrowRight size={11} />
-                          </button>
-                        )}
-                        <button
-                          onClick={e => { e.stopPropagation(); deleteNotification?.(n.id) }}
-                          title="Delete"
-                          className="sm:opacity-0 sm:group-hover:opacity-100 w-7 h-7 flex items-center justify-center rounded-lg text-neutral-300 hover:text-red-400 hover:bg-red-50 transition-all"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    </div>
+                    {/* Row 2 — message */}
+                    <p className="text-[13px] font-medium text-black leading-snug">
+                      {n.message}
+                    </p>
 
                     {/* Row 3 — meta */}
                     <div className="flex items-center flex-wrap gap-x-1">
                       <span className="text-[11px] text-neutral-400">
                         {[n.room, n.date, timeAgo(n.createdAt), fmtDateTime(n.createdAt)].filter(Boolean).join(' · ')}
                       </span>
+                    </div>
+
+                    {/* Row 4 — action buttons (always last) */}
+                    <div className="flex items-center gap-2">
+                      {isPriority && (
+                        <button
+                          onClick={e => { e.stopPropagation(); onNavigate?.('myMeetings') }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold rounded-xl transition-colors whitespace-nowrap shadow-sm"
+                        >
+                          View Action <ArrowRight size={11} />
+                        </button>
+                      )}
+                      <button
+                        onClick={e => { e.stopPropagation(); deleteNotification?.(n.id) }}
+                        title="Delete"
+                        className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-300 hover:text-red-400 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
+                      >
+                        <Trash2 size={13} />
+                      </button>
                     </div>
 
                   </div>
