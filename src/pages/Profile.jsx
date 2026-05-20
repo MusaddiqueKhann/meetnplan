@@ -553,9 +553,9 @@ export default function Profile({
                                 bookings={bookings}
                                 rooms={rooms}
                                 settings={settings}
-                                onReschedule={async (newData) => {
+                                onReschedule={async (bk, newData) => {
                                   try {
-                                    await rescheduleBooking?.(conflictingBooking, newData)
+                                    await rescheduleBooking?.(bk, newData)
                                     await markNotificationRead?.(n.id)
                                     setApprovalState(s => ({ ...s, [n.id]: 'done' }))
                                   } catch {
