@@ -217,13 +217,10 @@ export default function Notifications({
                       </div>
                     </div>
 
-                    {/* Line 3 — meta left, date right */}
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="text-[11px] text-neutral-400 truncate">
-                        {[n.room, n.date, timeAgo(n.createdAt)].filter(Boolean).join(' · ')}
-                      </span>
-                      <span className="text-[11px] text-neutral-400 whitespace-nowrap flex-shrink-0">
-                        {fmtDateTime(n.createdAt)}
+                    {/* Line 3 — meta + date inline */}
+                    <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5">
+                      <span className="text-[11px] text-neutral-400">
+                        {[n.room, n.date, timeAgo(n.createdAt), fmtDateTime(n.createdAt)].filter(Boolean).join(' · ')}
                       </span>
                     </div>
 
