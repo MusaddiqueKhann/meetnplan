@@ -181,8 +181,8 @@ export default function Notifications({
 
                   {/* Content — full width */}
                   <div className="flex-1 min-w-0">
-                    {/* Row 1: badge + read status + date (right) */}
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                    {/* Row 1: badge + read status */}
+                    <div className="flex items-center gap-2 flex-wrap mb-1.5">
                       <span className={`text-[9px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-full ${cfg.light} ${cfg.text}`}>
                         {cfg.label}
                       </span>
@@ -191,42 +191,41 @@ export default function Notifications({
                         ? <span className="text-[10px] font-semibold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">Read</span>
                         : <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Unread</span>
                       }
-                      <span className="ml-auto text-[11px] text-neutral-400 whitespace-nowrap hidden sm:block">
-                        {fmtDateTime(n.createdAt)}
-                      </span>
                     </div>
 
-                    {/* Row 2: message */}
-                    <p className="text-[13px] font-medium text-black leading-snug">
-                      {n.message}
-                    </p>
+                    {/* Row 2: message + View Action button */}
+                    <div className="flex items-start justify-between gap-4">
+                      <p className="text-[13px] font-medium text-black leading-snug flex-1">
+                        {n.message}
+                      </p>
+                      {isPriority && (
+                        <button
+                          onClick={e => { e.stopPropagation(); onNavigate?.('myMeetings') }}
+                          className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold rounded-xl transition-colors whitespace-nowrap"
+                        >
+                          View Action <ArrowRight size={10} />
+                        </button>
+                      )}
+                    </div>
 
-                    {/* Row 3: meta + time ago + actions */}
-                    <div className="flex items-center gap-3 mt-2 flex-wrap">
+                    {/* Row 3: meta + date on the right */}
+                    <div className="flex items-center gap-2 mt-1.5">
                       {(n.room || n.date) && (
                         <span className="text-[11px] text-neutral-400">
                           {[n.room, n.date].filter(Boolean).join(' · ')}
                         </span>
                       )}
                       <span className="text-[10px] text-neutral-400">{timeAgo(n.createdAt)}</span>
-
-                      <div className="ml-auto flex items-center gap-2">
-                        {isPriority && (
-                          <button
-                            onClick={e => { e.stopPropagation(); onNavigate?.('myMeetings') }}
-                            className="flex items-center gap-1 px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold rounded-lg transition-colors whitespace-nowrap"
-                          >
-                            View Action <ArrowRight size={10} />
-                          </button>
-                        )}
-                        <button
-                          onClick={e => { e.stopPropagation(); deleteNotification?.(n.id) }}
-                          title="Delete"
-                          className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-lg text-neutral-300 hover:text-red-400 hover:bg-red-50 transition-all"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
+                      <span className="ml-auto text-[11px] text-neutral-400 whitespace-nowrap">
+                        {fmtDateTime(n.createdAt)}
+                      </span>
+                      <button
+                        onClick={e => { e.stopPropagation(); deleteNotification?.(n.id) }}
+                        title="Delete"
+                        className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-lg text-neutral-300 hover:text-red-400 hover:bg-red-50 transition-all"
+                      >
+                        <Trash2 size={12} />
+                      </button>
                     </div>
                   </div>
                 </div>
