@@ -45,12 +45,12 @@ function blobToBase64(blob) {
 }
 
 const TABS = [
-  { id: 'users',           label: 'Users',          icon: Users      },
-  { id: 'rooms',           label: 'Rooms',          icon: Building2  },
-  { id: 'bookings',        label: 'Bookings',       icon: CalendarDays },
-  { id: 'client_meetings', label: 'Client Meetings', icon: Briefcase  },
-  { id: 'analytics',       label: 'Analytics',      icon: BarChart3  },
-  { id: 'settings',        label: 'Settings',       icon: Settings2  },
+  { id: 'users',           label: 'Users',    icon: Users      },
+  { id: 'rooms',           label: 'Rooms',    icon: Building2  },
+  { id: 'bookings',        label: 'Bookings', icon: CalendarDays },
+  { id: 'client_meetings', label: 'Clients',  icon: Briefcase  },
+  { id: 'analytics',       label: 'Analytics',icon: BarChart3  },
+  { id: 'settings',        label: 'Settings', icon: Settings2  },
 ]
 
 const FEATURES = ['Display', 'Projector', 'Whiteboard', 'VC System', 'WiFi', 'Coffee Station', 'Video Conferencing']
@@ -66,7 +66,7 @@ const BG_OPTIONS = [
 ]
 const PATTERNS = ['◆', '▲', '●', '■', '✦', '❋', '◉']
 
-const inputCls = 'w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm bg-white focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all placeholder:text-neutral-300'
+const inputCls = 'w-full px-4 py-3 rounded-xl border border-neutral-200 text-base md:text-sm bg-white focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all placeholder:text-neutral-300'
 
 function pad(n) { return String(n).padStart(2, '0') }
 function hourLabel(h) {
@@ -131,16 +131,17 @@ function UsersTab({ currentUser, bookings, deleteBooking }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between gap-4">
+      {/* Header row */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-bold text-black">Users</h2>
           <p className="text-sm text-neutral-400 mt-0.5">{users.length} registered accounts</p>
         </div>
-        <div className="relative">
+        <div className="relative w-full sm:w-56">
           <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
           <input type="text" placeholder="Search users..." value={search}
             onChange={e => setSearch(e.target.value)}
-            className="pl-9 pr-4 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-black placeholder-neutral-300 outline-none focus:border-black focus:bg-white transition-colors w-56" />
+            className="pl-9 pr-4 py-2.5 w-full bg-neutral-50 border border-neutral-200 rounded-xl text-base md:text-sm text-black placeholder-neutral-300 outline-none focus:border-black focus:bg-white transition-colors" />
         </div>
       </div>
 
@@ -156,48 +157,53 @@ function UsersTab({ currentUser, bookings, deleteBooking }) {
             const bookingCount = bookings.filter(b => b.ownerEmail === u.email).length
             return (
               <div key={u.id} className="p-4 bg-white">
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center flex-shrink-0">
-                      <span className="text-[11px] font-bold text-white">{(u.name || 'U').charAt(0).toUpperCase()}</span>
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[13px] font-semibold text-black truncate">{u.name}</p>
-                      <p className="text-[11px] text-neutral-400 truncate">{u.email || u.id}</p>
+                {/* Top row: avatar + name + actions */}
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-[13px] font-bold text-white">{(u.name || 'U').charAt(0).toUpperCase()}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[14px] font-semibold text-black truncate leading-tight">{u.name}</p>
+                    <p className="text-[12px] text-neutral-400 truncate mt-0.5">{u.email || u.id}</p>
+                    {/* Metadata row */}
+                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide
+                        ${u.role === 'admin' ? 'bg-black text-white' : 'bg-neutral-100 text-neutral-500'}`}>
+                        {u.role || 'user'}
+                      </span>
+                      {u.company && (
+                        <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] text-neutral-600 bg-neutral-50 border border-neutral-200 font-medium">
+                          {u.company}
+                        </span>
+                      )}
+                      <span className="text-[11px] text-neutral-400">{bookingCount} booking{bookingCount !== 1 ? 's' : ''}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {/* Action buttons — large touch targets */}
+                  <div className="flex items-center gap-1 flex-shrink-0">
                     <button
                       onClick={() => toggleRole(u)}
                       disabled={isSelf || loading[u.id]}
                       title={u.role === 'admin' ? 'Demote to user' : 'Promote to admin'}
-                      className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neutral-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                      className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-neutral-100 active:bg-neutral-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
                       {loading[u.id]
-                        ? <Loader2 size={13} className="animate-spin text-neutral-400" />
+                        ? <Loader2 size={15} className="animate-spin text-neutral-400" />
                         : u.role === 'admin'
-                          ? <ShieldOff size={13} className="text-neutral-500" />
-                          : <ShieldCheck size={13} className="text-indigo-500" />
+                          ? <ShieldOff size={15} className="text-neutral-500" />
+                          : <ShieldCheck size={15} className="text-indigo-500" />
                       }
                     </button>
                     <button
                       onClick={() => setConfirm(u)}
                       disabled={isSelf || loading[u.id + '_del']}
                       title="Delete user"
-                      className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                      className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-red-50 active:bg-red-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
                       {loading[u.id + '_del']
-                        ? <Loader2 size={13} className="animate-spin text-red-400" />
-                        : <Trash2 size={13} className="text-red-400" />
+                        ? <Loader2 size={15} className="animate-spin text-red-400" />
+                        : <Trash2 size={15} className="text-red-400" />
                       }
                     </button>
                   </div>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap ml-[42px]">
-                  <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide
-                    ${u.role === 'admin' ? 'bg-black text-white' : 'bg-neutral-100 text-neutral-500'}`}>
-                    {u.role || 'user'}
-                  </span>
-                  {u.company && <span className="text-[11px] text-neutral-500">{u.company}</span>}
-                  <span className="text-[10px] text-neutral-300">{bookingCount} booking{bookingCount !== 1 ? 's' : ''}</span>
                 </div>
               </div>
             )
@@ -270,8 +276,8 @@ function UsersTab({ currentUser, bookings, deleteBooking }) {
 
       {/* Delete confirm modal */}
       {confirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-2xl p-6 w-full max-w-sm flex flex-col gap-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl border border-neutral-200 shadow-2xl p-6 w-full sm:max-w-sm flex flex-col gap-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
                 <AlertTriangle size={18} className="text-red-500" />
@@ -288,11 +294,11 @@ function UsersTab({ currentUser, bookings, deleteBooking }) {
             </p>
             <div className="flex gap-3">
               <button onClick={() => deleteUserProfile(confirm)} disabled={loading[confirm.id + '_del']}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 text-[13px] font-semibold text-white bg-red-500 rounded-xl hover:bg-red-600 transition-colors disabled:opacity-60">
+                className="flex-1 flex items-center justify-center gap-2 py-3 text-[13px] font-semibold text-white bg-red-500 rounded-xl hover:bg-red-600 transition-colors disabled:opacity-60">
                 {loading[confirm.id + '_del'] ? <Loader2 size={13} className="animate-spin" /> : 'Delete'}
               </button>
               <button onClick={() => setConfirm(null)}
-                className="flex-1 py-2.5 text-[13px] font-semibold text-neutral-600 bg-neutral-100 rounded-xl hover:bg-neutral-200 transition-colors">
+                className="flex-1 py-3 text-[13px] font-semibold text-neutral-600 bg-neutral-100 rounded-xl hover:bg-neutral-200 transition-colors">
                 Cancel
               </button>
             </div>
@@ -413,7 +419,7 @@ function RoomsTab({ rooms, bookings, onAddRoom, onRemoveRoom, onUpdateRoom }) {
           <p className="text-sm text-neutral-400 mt-0.5">{rooms.length} meeting rooms</p>
         </div>
         <button onClick={openAdd}
-          className="flex items-center gap-2 px-4 py-2.5 bg-black text-white text-[13px] font-semibold rounded-xl hover:bg-neutral-800 transition-colors">
+          className="flex items-center gap-2 px-4 py-2.5 bg-black text-white text-[13px] font-semibold rounded-xl hover:bg-neutral-800 active:bg-neutral-700 transition-colors">
           <Plus size={14} /> Add Room
         </button>
       </div>
@@ -424,9 +430,9 @@ function RoomsTab({ rooms, bookings, onAddRoom, onRemoveRoom, onUpdateRoom }) {
           return (
             <div key={room.id} className="group bg-white border border-neutral-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200">
               {/* Image / Gradient area */}
-              <div className="relative h-48 overflow-hidden">
+              <div className="relative h-44 overflow-hidden">
                 {room.image
-                  ? <img src={room.image} alt={room.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  ? <img src={room.image} alt={room.name} className="w-full h-full object-cover md:group-hover:scale-105 transition-transform duration-300" />
                   : <div className={`w-full h-full bg-gradient-to-br ${room.bg} flex items-center justify-center`}>
                       <span className="text-7xl font-black text-black/[0.07]">{room.pattern}</span>
                     </div>
@@ -435,15 +441,15 @@ function RoomsTab({ rooms, bookings, onAddRoom, onRemoveRoom, onUpdateRoom }) {
                 <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 bg-black/50 backdrop-blur-sm rounded-full">
                   <span className="text-[11px] font-semibold text-white">{room.capacity} seats</span>
                 </div>
-                {/* Action buttons — appear on hover */}
-                <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                {/* Action buttons — always visible on mobile, hover-reveal on desktop */}
+                <div className="absolute top-3 right-3 flex gap-1.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
                   <button onClick={() => openEdit(room)}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/90 backdrop-blur-sm hover:bg-white shadow-sm transition-colors">
-                    <Edit2 size={12} className="text-neutral-600" />
+                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/90 backdrop-blur-sm hover:bg-white shadow-sm transition-colors">
+                    <Edit2 size={13} className="text-neutral-600" />
                   </button>
                   <button onClick={() => handleDelete(room)}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/90 backdrop-blur-sm hover:bg-red-50 shadow-sm transition-colors">
-                    <Trash2 size={12} className="text-red-500" />
+                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/90 backdrop-blur-sm hover:bg-red-50 shadow-sm transition-colors">
+                    <Trash2 size={13} className="text-red-500" />
                   </button>
                 </div>
               </div>
@@ -473,10 +479,10 @@ function RoomsTab({ rooms, bookings, onAddRoom, onRemoveRoom, onUpdateRoom }) {
         })}
       </div>
 
-      {/* Delete room confirm modal */}
+      {/* Delete room confirm — bottom sheet on mobile */}
       {confirmDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-2xl p-6 w-full max-w-sm flex flex-col gap-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl border border-neutral-200 shadow-2xl p-6 w-full sm:max-w-sm flex flex-col gap-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
                 <AlertTriangle size={18} className="text-red-500" />
@@ -501,11 +507,11 @@ function RoomsTab({ rooms, bookings, onAddRoom, onRemoveRoom, onUpdateRoom }) {
             })()}
             <div className="flex gap-3">
               <button onClick={doDelete} disabled={deleting}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 text-[13px] font-semibold text-white bg-red-500 rounded-xl hover:bg-red-600 transition-colors disabled:opacity-60">
+                className="flex-1 flex items-center justify-center gap-2 py-3 text-[13px] font-semibold text-white bg-red-500 rounded-xl hover:bg-red-600 transition-colors disabled:opacity-60">
                 {deleting ? <Loader2 size={13} className="animate-spin" /> : <><Trash2 size={13} /> Delete Room</>}
               </button>
               <button onClick={() => setConfirmDelete(null)} disabled={deleting}
-                className="flex-1 py-2.5 text-[13px] font-semibold text-neutral-600 bg-neutral-100 rounded-xl hover:bg-neutral-200 transition-colors disabled:opacity-60">
+                className="flex-1 py-3 text-[13px] font-semibold text-neutral-600 bg-neutral-100 rounded-xl hover:bg-neutral-200 transition-colors disabled:opacity-60">
                 Cancel
               </button>
             </div>
@@ -513,106 +519,112 @@ function RoomsTab({ rooms, bookings, onAddRoom, onRemoveRoom, onUpdateRoom }) {
         </div>
       )}
 
-      {/* Add/Edit Room form modal */}
+      {/* Add/Edit Room form — bottom sheet on mobile */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-2xl p-6 w-full max-w-md">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-[15px] font-bold text-black">{editRoom ? 'Edit Room' : 'Add New Room'}</h3>
-              <button onClick={() => setShowForm(false)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neutral-100 transition-colors">
-                <X size={14} className="text-neutral-500" />
-              </button>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl border border-neutral-200 shadow-2xl w-full sm:max-w-md max-h-[92dvh] overflow-y-auto">
+            {/* Drag handle for mobile */}
+            <div className="flex justify-center pt-3 pb-1 sm:hidden">
+              <div className="w-10 h-1 bg-neutral-200 rounded-full" />
             </div>
-            <form onSubmit={handleSave} className="flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Room Name</label>
-                  <input type="text" placeholder="e.g. Boardroom A" value={formData.name}
-                    onChange={e => setFormData(d => ({ ...d, name: e.target.value }))} className={inputCls} required />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Capacity</label>
-                  <input type="number" placeholder="10" min="1" max="200" value={formData.capacity}
-                    onChange={e => setFormData(d => ({ ...d, capacity: e.target.value }))} className={inputCls} required />
-                </div>
+            <div className="px-6 pb-6 pt-3 sm:pt-6">
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-[15px] font-bold text-black">{editRoom ? 'Edit Room' : 'Add New Room'}</h3>
+                <button onClick={() => setShowForm(false)} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-neutral-100 transition-colors">
+                  <X size={15} className="text-neutral-500" />
+                </button>
               </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Background Colour</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {BG_OPTIONS.map(bg => (
-                    <button key={bg} type="button" onClick={() => setFormData(d => ({ ...d, bg }))}
-                      className={`h-8 rounded-lg bg-gradient-to-br ${bg} border-2 transition-all ${formData.bg === bg ? 'border-black scale-105' : 'border-transparent'}`} />
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Pattern</label>
-                <div className="flex gap-2 flex-wrap">
-                  {PATTERNS.map(p => (
-                    <button key={p} type="button" onClick={() => setFormData(d => ({ ...d, pattern: p }))}
-                      className={`w-9 h-9 rounded-lg text-lg border-2 transition-all ${formData.pattern === p ? 'border-black bg-neutral-100' : 'border-neutral-200 hover:border-neutral-300'}`}>
-                      {p}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Image upload */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Room Image <span className="normal-case font-normal text-neutral-300">(optional — overrides gradient)</span></label>
-                {(imagePreview || formData.image) ? (
-                  <div className="relative w-full h-28 rounded-xl overflow-hidden border border-neutral-200">
-                    <img src={imagePreview || formData.image} alt="" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center gap-2 opacity-0 hover:opacity-100 transition-opacity">
-                      <label className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg text-[11px] font-semibold text-black cursor-pointer hover:bg-neutral-100 transition-colors">
-                        <Upload size={11} /> Change
-                        <input type="file" accept="image/*" className="sr-only" onChange={handleImageChange} />
-                      </label>
-                      <button type="button" onClick={clearImage}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg text-[11px] font-semibold text-red-500 hover:bg-red-50 transition-colors">
-                        <ImageOff size={11} /> Remove
-                      </button>
-                    </div>
+              <form onSubmit={handleSave} className="flex flex-col gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Room Name</label>
+                    <input type="text" placeholder="e.g. Boardroom A" value={formData.name}
+                      onChange={e => setFormData(d => ({ ...d, name: e.target.value }))} className={inputCls} required />
                   </div>
-                ) : (
-                  <label className="flex flex-col items-center justify-center gap-2 h-24 border-2 border-dashed border-neutral-200 rounded-xl cursor-pointer hover:border-neutral-400 hover:bg-neutral-50 transition-all">
-                    <Upload size={18} className="text-neutral-300" />
-                    <span className="text-[11px] text-neutral-400 font-medium">Click to upload a room photo</span>
-                    <span className="text-[10px] text-neutral-300">JPG, PNG, WEBP</span>
-                    <input type="file" accept="image/*" className="sr-only" onChange={handleImageChange} />
-                  </label>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Features</label>
-                <div className="flex flex-wrap gap-2">
-                  {FEATURES.map(f => (
-                    <button key={f} type="button" onClick={() => toggleFeature(f)}
-                      className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${
-                        formData.features.includes(f) ? 'bg-black text-white border-black' : 'bg-white text-neutral-600 border-neutral-200 hover:border-neutral-400'
-                      }`}>
-                      {f}
-                    </button>
-                  ))}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Capacity</label>
+                    <input type="number" placeholder="10" min="1" max="200" value={formData.capacity}
+                      onChange={e => setFormData(d => ({ ...d, capacity: e.target.value }))} className={inputCls} required />
+                  </div>
                 </div>
-              </div>
 
-              {formError && <p className="text-xs text-red-500">{formError}</p>}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Background Colour</label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {BG_OPTIONS.map(bg => (
+                      <button key={bg} type="button" onClick={() => setFormData(d => ({ ...d, bg }))}
+                        className={`h-9 rounded-lg bg-gradient-to-br ${bg} border-2 transition-all ${formData.bg === bg ? 'border-black scale-105' : 'border-transparent'}`} />
+                    ))}
+                  </div>
+                </div>
 
-              <div className="flex gap-3 pt-1">
-                <button type="submit" disabled={saving}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 text-[13px] font-semibold text-white bg-black rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-60">
-                  {saving ? <Loader2 size={13} className="animate-spin" /> : <><Check size={14} /> {editRoom ? 'Save Changes' : 'Add Room'}</>}
-                </button>
-                <button type="button" onClick={() => setShowForm(false)}
-                  className="flex-1 py-2.5 text-[13px] font-semibold text-neutral-600 bg-neutral-100 rounded-xl hover:bg-neutral-200 transition-colors">
-                  Cancel
-                </button>
-              </div>
-            </form>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Pattern</label>
+                  <div className="flex gap-2 flex-wrap">
+                    {PATTERNS.map(p => (
+                      <button key={p} type="button" onClick={() => setFormData(d => ({ ...d, pattern: p }))}
+                        className={`w-10 h-10 rounded-xl text-lg border-2 transition-all ${formData.pattern === p ? 'border-black bg-neutral-100' : 'border-neutral-200 hover:border-neutral-300'}`}>
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Image upload */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Room Image <span className="normal-case font-normal text-neutral-300">(optional — overrides gradient)</span></label>
+                  {(imagePreview || formData.image) ? (
+                    <div className="relative w-full h-28 rounded-xl overflow-hidden border border-neutral-200">
+                      <img src={imagePreview || formData.image} alt="" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/20 flex items-center justify-center gap-2">
+                        <label className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg text-[11px] font-semibold text-black cursor-pointer hover:bg-neutral-100 transition-colors">
+                          <Upload size={11} /> Change
+                          <input type="file" accept="image/*" className="sr-only" onChange={handleImageChange} />
+                        </label>
+                        <button type="button" onClick={clearImage}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg text-[11px] font-semibold text-red-500 hover:bg-red-50 transition-colors">
+                          <ImageOff size={11} /> Remove
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center gap-2 h-24 border-2 border-dashed border-neutral-200 rounded-xl cursor-pointer hover:border-neutral-400 hover:bg-neutral-50 transition-all">
+                      <Upload size={18} className="text-neutral-300" />
+                      <span className="text-[11px] text-neutral-400 font-medium">Click to upload a room photo</span>
+                      <span className="text-[10px] text-neutral-300">JPG, PNG, WEBP</span>
+                      <input type="file" accept="image/*" className="sr-only" onChange={handleImageChange} />
+                    </label>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Features</label>
+                  <div className="flex flex-wrap gap-2">
+                    {FEATURES.map(f => (
+                      <button key={f} type="button" onClick={() => toggleFeature(f)}
+                        className={`px-3 py-2 rounded-xl text-[12px] font-semibold border transition-all ${
+                          formData.features.includes(f) ? 'bg-black text-white border-black' : 'bg-white text-neutral-600 border-neutral-200 hover:border-neutral-400'
+                        }`}>
+                        {f}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {formError && <p className="text-xs text-red-500">{formError}</p>}
+
+                <div className="flex gap-3 pt-1">
+                  <button type="submit" disabled={saving}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 text-[13px] font-semibold text-white bg-black rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-60">
+                    {saving ? <Loader2 size={13} className="animate-spin" /> : <><Check size={14} /> {editRoom ? 'Save Changes' : 'Add Room'}</>}
+                  </button>
+                  <button type="button" onClick={() => setShowForm(false)}
+                    className="flex-1 py-3 text-[13px] font-semibold text-neutral-600 bg-neutral-100 rounded-xl hover:bg-neutral-200 transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
@@ -640,35 +652,38 @@ function BookingsTab({ bookings, rooms, deleteBooking }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      {/* Header + filters */}
+      <div className="flex flex-col gap-3">
         <div>
           <h2 className="text-lg font-bold text-black">Bookings</h2>
           <p className="text-sm text-neutral-400 mt-0.5">{bookings.length} total · {filtered.length} shown</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
+        {/* Filter row — stacks on mobile */}
+        <div className="flex flex-col sm:flex-row gap-2">
+          {/* Search */}
+          <div className="relative flex-1">
+            <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <input type="text" placeholder="Search meetings, emails, companies..." value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-9 pr-4 py-2.5 w-full bg-white border border-neutral-200 rounded-xl text-base md:text-sm text-black placeholder-neutral-300 outline-none focus:border-black transition-colors" />
+          </div>
           {/* Room filter */}
           <div className="relative">
             <button onClick={() => setRoomOpen(v => !v)}
-              className="flex items-center gap-2 px-3.5 py-2 bg-white border border-neutral-200 rounded-xl text-[13px] font-medium text-neutral-600 hover:border-neutral-400 transition-colors">
-              {filterRoom || 'All Rooms'} <ChevronDown size={13} className={`transition-transform ${roomOpen ? 'rotate-180' : ''}`} />
+              className="flex items-center justify-between gap-2 w-full sm:w-auto px-3.5 py-2.5 bg-white border border-neutral-200 rounded-xl text-[13px] font-medium text-neutral-600 hover:border-neutral-400 transition-colors">
+              <span>{filterRoom || 'All Rooms'}</span>
+              <ChevronDown size={13} className={`transition-transform flex-shrink-0 ${roomOpen ? 'rotate-180' : ''}`} />
             </button>
             {roomOpen && (
-              <div className="absolute right-0 top-full mt-1 bg-white border border-neutral-200 rounded-xl shadow-lg z-20 overflow-hidden min-w-[160px]">
+              <div className="absolute left-0 sm:right-0 sm:left-auto top-full mt-1 bg-white border border-neutral-200 rounded-xl shadow-lg z-20 overflow-hidden min-w-[160px] w-full sm:w-auto">
                 {[{ name: '' }, ...rooms].map(r => (
                   <button key={r.name || '__all'} onClick={() => { setFilterRoom(r.name); setRoomOpen(false) }}
-                    className={`w-full px-4 py-2.5 text-left text-[13px] font-medium hover:bg-neutral-50 transition-colors ${filterRoom === r.name ? 'text-black font-semibold' : 'text-neutral-600'}`}>
+                    className={`w-full px-4 py-3 text-left text-[13px] font-medium hover:bg-neutral-50 transition-colors ${filterRoom === r.name ? 'text-black font-semibold' : 'text-neutral-600'}`}>
                     {r.name || 'All Rooms'}
                   </button>
                 ))}
               </div>
             )}
-          </div>
-          {/* Search */}
-          <div className="relative">
-            <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
-            <input type="text" placeholder="Search..." value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="pl-9 pr-4 py-2 bg-white border border-neutral-200 rounded-xl text-[13px] text-black placeholder-neutral-300 outline-none focus:border-black transition-colors w-44" />
           </div>
         </div>
       </div>
@@ -682,21 +697,25 @@ function BookingsTab({ bookings, rooms, deleteBooking }) {
         <div className="block md:hidden divide-y divide-neutral-100">
           {filtered.map(b => (
             <div key={b.id} className="p-4 bg-white">
-              <div className="flex items-start justify-between gap-3 mb-1">
-                <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-black truncate">{b.title || b.meetingName}</p>
-                  <p className="text-[11px] text-neutral-400 truncate">{b.ownerEmail}</p>
+              <div className="flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[14px] font-semibold text-black truncate leading-tight">{b.title || b.meetingName}</p>
+                  <p className="text-[12px] text-neutral-400 truncate mt-0.5">{b.ownerEmail}</p>
+                  {(b.companyName || b.coordinator) && (
+                    <p className="text-[11px] text-neutral-400 truncate">{b.companyName || b.coordinator}</p>
+                  )}
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    <span className="inline-flex px-2 py-0.5 rounded-lg bg-neutral-100 text-[11px] font-medium text-neutral-600">{b.room}</span>
+                    <span className="text-[11px] text-neutral-500">{fmtDate(b.date)}</span>
+                    <span className="text-[11px] text-neutral-500">{minsToAmPm(b.startMinutes)} – {minsToAmPm(b.endMinutes)}</span>
+                  </div>
                 </div>
                 <button
                   onClick={() => { if (window.confirm('Cancel this booking?')) deleteBooking(b.id) }}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 transition-colors flex-shrink-0">
-                  <Trash2 size={13} className="text-red-400" />
+                  className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-red-50 active:bg-red-100 transition-colors flex-shrink-0 mt-0.5">
+                  <Trash2 size={15} className="text-red-400" />
                 </button>
               </div>
-              <p className="text-[11px] text-neutral-500 font-medium">{b.room}</p>
-              <p className="text-[11px] text-neutral-400">
-                {fmtDate(b.date)} · {minsToAmPm(b.startMinutes)} – {minsToAmPm(b.endMinutes)}
-              </p>
             </div>
           ))}
         </div>
@@ -782,17 +801,17 @@ function AnalyticsTab({ bookings, rooms }) {
         <p className="text-sm text-neutral-400 mt-0.5">Usage overview across all rooms and companies</p>
       </div>
 
-      {/* KPI cards */}
+      {/* KPI cards — 1 col on xs, 2 col on sm, 4 col on md+ */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Total Bookings',   value: bookings.length },
-          { label: 'This Week',        value: thisWeek.length },
-          { label: 'Total Hours',      value: Math.round(totalMins / 60) + 'h' },
-          { label: 'Rooms Active',     value: rooms.length },
+          { label: 'Total Bookings', value: bookings.length },
+          { label: 'This Week',      value: thisWeek.length },
+          { label: 'Total Hours',    value: Math.round(totalMins / 60) + 'h' },
+          { label: 'Rooms Active',   value: rooms.length },
         ].map(({ label, value }) => (
-          <div key={label} className="bg-white border border-neutral-200 rounded-2xl p-4">
-            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">{label}</p>
-            <p className="text-2xl font-black text-black mt-1">{value}</p>
+          <div key={label} className="bg-white border border-neutral-200 rounded-2xl p-4 min-w-0">
+            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider leading-tight">{label}</p>
+            <p className="text-2xl font-black text-black mt-1.5 leading-none">{value}</p>
           </div>
         ))}
       </div>
@@ -802,15 +821,17 @@ function AnalyticsTab({ bookings, rooms }) {
         <div className="bg-white border border-neutral-200 rounded-2xl p-5">
           <p className="text-[12px] font-bold text-black mb-4">Bookings by Room</p>
           {byRoom.length === 0 && <p className="text-sm text-neutral-300">No data yet</p>}
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-3">
             {byRoom.map(({ name, count }) => (
-              <div key={name} className="flex items-center gap-3">
-                <span className="text-[11px] text-neutral-600 font-medium w-28 truncate flex-shrink-0">{name}</span>
-                <div className="flex-1 h-5 bg-neutral-100 rounded-full overflow-hidden">
+              <div key={name} className="flex flex-col gap-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[12px] text-neutral-700 font-medium truncate">{name}</span>
+                  <span className="text-[12px] font-bold text-black flex-shrink-0">{count}</span>
+                </div>
+                <div className="w-full h-2 bg-neutral-100 rounded-full overflow-hidden">
                   <div className="h-full bg-black rounded-full transition-all duration-500"
                     style={{ width: `${(count / maxRoom) * 100}%` }} />
                 </div>
-                <span className="text-[11px] font-bold text-black w-5 text-right flex-shrink-0">{count}</span>
               </div>
             ))}
           </div>
@@ -820,15 +841,17 @@ function AnalyticsTab({ bookings, rooms }) {
         <div className="bg-white border border-neutral-200 rounded-2xl p-5">
           <p className="text-[12px] font-bold text-black mb-4">Bookings by Company</p>
           {byCompany.length === 0 && <p className="text-sm text-neutral-300">No data yet</p>}
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-3">
             {byCompany.map(({ name, count }) => (
-              <div key={name} className="flex items-center gap-3">
-                <span className="text-[11px] text-neutral-600 font-medium w-28 truncate flex-shrink-0">{name}</span>
-                <div className="flex-1 h-5 bg-neutral-100 rounded-full overflow-hidden">
+              <div key={name} className="flex flex-col gap-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[12px] text-neutral-700 font-medium truncate">{name}</span>
+                  <span className="text-[12px] font-bold text-black flex-shrink-0">{count}</span>
+                </div>
+                <div className="w-full h-2 bg-neutral-100 rounded-full overflow-hidden">
                   <div className="h-full bg-indigo-500 rounded-full transition-all duration-500"
                     style={{ width: `${(count / maxCompany) * 100}%` }} />
                 </div>
-                <span className="text-[11px] font-bold text-black w-5 text-right flex-shrink-0">{count}</span>
               </div>
             ))}
           </div>
@@ -838,15 +861,17 @@ function AnalyticsTab({ bookings, rooms }) {
         <div className="bg-white border border-neutral-200 rounded-2xl p-5">
           <p className="text-[12px] font-bold text-black mb-4">Peak Booking Hours</p>
           {peakHours.length === 0 && <p className="text-sm text-neutral-300">No data yet</p>}
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-3">
             {peakHours.map(({ h, count }) => (
-              <div key={h} className="flex items-center gap-3">
-                <span className="text-[11px] text-neutral-600 font-medium w-20 flex-shrink-0">{hr(h)}</span>
-                <div className="flex-1 h-5 bg-neutral-100 rounded-full overflow-hidden">
+              <div key={h} className="flex flex-col gap-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[12px] text-neutral-700 font-medium">{hr(h)}</span>
+                  <span className="text-[12px] font-bold text-black flex-shrink-0">{count}</span>
+                </div>
+                <div className="w-full h-2 bg-neutral-100 rounded-full overflow-hidden">
                   <div className="h-full bg-emerald-500 rounded-full transition-all duration-500"
                     style={{ width: `${(count / maxHour) * 100}%` }} />
                 </div>
-                <span className="text-[11px] font-bold text-black w-5 text-right flex-shrink-0">{count}</span>
               </div>
             ))}
           </div>
@@ -945,6 +970,8 @@ function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove
     .filter(h => h.meetingType === 'client' || h.action === 'priority_created' || h.action === 'approved')
     .slice(0, 40)
 
+  const hasActiveFilters = filterStatus !== 'all' || filterRoom !== 'all' || filterCompany !== 'all' || filterDate || search
+
   return (
     <div className="flex flex-col gap-5">
       <div>
@@ -952,7 +979,7 @@ function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove
         <p className="text-sm text-neutral-400 mt-0.5">Priority management and approval tracking</p>
       </div>
 
-      {/* KPIs */}
+      {/* KPIs — 2 col on mobile, 5 col on sm+ */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {[
           { label: 'Total Client',     value: total,         cls: 'text-amber-600'  },
@@ -961,46 +988,49 @@ function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove
           { label: 'Action Needed',    value: waitingAction, cls: 'text-red-500'    },
           { label: 'Rescheduled',      value: rescheduled,   cls: 'text-blue-600'   },
         ].map(({ label, value, cls }) => (
-          <div key={label} className="bg-white border border-neutral-200 rounded-2xl p-4">
-            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">{label}</p>
-            <p className={`text-2xl font-black mt-1 ${cls}`}>{value}</p>
+          <div key={label} className="bg-white border border-neutral-200 rounded-2xl p-4 min-w-0">
+            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider leading-tight">{label}</p>
+            <p className={`text-2xl font-black mt-1.5 leading-none ${cls}`}>{value}</p>
           </div>
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2 items-center">
+      {/* Filters — fully stacked on mobile */}
+      <div className="flex flex-col gap-2">
+        {/* Search full width */}
         <div className="relative">
-          <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-          <input type="text" placeholder="Search meetings..." value={search} onChange={e => setSearch(e.target.value)}
-            className="pl-8 pr-3 py-2 bg-white border border-neutral-200 rounded-xl text-xs text-black placeholder-neutral-300 outline-none focus:border-black transition-colors w-44" />
+          <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+          <input type="text" placeholder="Search meetings, coordinators, clients..." value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-9 pr-4 py-2.5 w-full bg-white border border-neutral-200 rounded-xl text-base md:text-sm text-black placeholder-neutral-300 outline-none focus:border-black transition-colors" />
         </div>
-
-        {[
-          { value: filterStatus,  onChange: setFilterStatus,  opts: [
-            { v: 'all', l: 'All Statuses' },
-            { v: 'approved',                  l: 'Approved'          },
-            { v: 'pending_priority_approval', l: 'Awaiting Approval'  },
-            { v: 'rejected',                  l: 'Rejected'           },
-            { v: 'priority_pending',          l: 'Priority Pending'   },
-            { v: 'waiting_for_action',        l: 'Action Needed'      },
-            { v: 'rescheduled',               l: 'Rescheduled'        },
-            { v: 'cancelled',                 l: 'Cancelled'          },
-          ]},
-          { value: filterRoom, onChange: setFilterRoom, opts: [{ v: 'all', l: 'All Rooms' }, ...allRooms.map(r => ({ v: r, l: r }))] },
-          { value: filterCompany, onChange: setFilterCompany, opts: [{ v: 'all', l: 'All Clients' }, ...allCompanies.map(c => ({ v: c, l: c }))] },
-        ].map(({ value, onChange, opts }, i) => (
-          <select key={i} value={value} onChange={e => onChange(e.target.value)}
-            className="px-3 py-2 bg-white border border-neutral-200 rounded-xl text-xs text-black focus:outline-none focus:border-black transition-colors cursor-pointer">
-            {opts.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
-          </select>
-        ))}
-
-        <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
-          className="px-3 py-2 bg-white border border-neutral-200 rounded-xl text-xs text-black focus:outline-none focus:border-black transition-colors" />
-        {(filterStatus !== 'all' || filterRoom !== 'all' || filterCompany !== 'all' || filterDate || search) && (
+        {/* Select filters — 2-col grid on mobile, inline on sm+ */}
+        <div className="grid grid-cols-2 sm:flex gap-2 flex-wrap">
+          {[
+            { value: filterStatus,  onChange: setFilterStatus,  opts: [
+              { v: 'all', l: 'All Statuses' },
+              { v: 'approved',                  l: 'Approved'          },
+              { v: 'pending_priority_approval', l: 'Awaiting Approval'  },
+              { v: 'rejected',                  l: 'Rejected'           },
+              { v: 'priority_pending',          l: 'Priority Pending'   },
+              { v: 'waiting_for_action',        l: 'Action Needed'      },
+              { v: 'rescheduled',               l: 'Rescheduled'        },
+              { v: 'cancelled',                 l: 'Cancelled'          },
+            ]},
+            { value: filterRoom, onChange: setFilterRoom, opts: [{ v: 'all', l: 'All Rooms' }, ...allRooms.map(r => ({ v: r, l: r }))] },
+            { value: filterCompany, onChange: setFilterCompany, opts: [{ v: 'all', l: 'All Clients' }, ...allCompanies.map(c => ({ v: c, l: c }))] },
+          ].map(({ value, onChange, opts }, i) => (
+            <select key={i} value={value} onChange={e => onChange(e.target.value)}
+              className="w-full sm:w-auto px-3 py-2.5 bg-white border border-neutral-200 rounded-xl text-base md:text-sm text-black focus:outline-none focus:border-black transition-colors cursor-pointer">
+              {opts.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+            </select>
+          ))}
+          <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
+            className="col-span-2 sm:col-span-1 px-3 py-2.5 bg-white border border-neutral-200 rounded-xl text-base md:text-sm text-black focus:outline-none focus:border-black transition-colors" />
+        </div>
+        {hasActiveFilters && (
           <button onClick={() => { setFilterStatus('all'); setFilterRoom('all'); setFilterCompany('all'); setFilterDate(''); setSearch('') }}
-            className="px-3 py-2 text-xs font-semibold text-neutral-500 hover:text-black transition-colors border border-neutral-200 rounded-xl bg-white">
+            className="self-start px-3 py-2 text-[13px] font-semibold text-neutral-500 hover:text-black transition-colors border border-neutral-200 rounded-xl bg-white">
             Clear filters
           </button>
         )}
@@ -1050,24 +1080,24 @@ function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove
 
             return (
               <div key={b.id} className="flex flex-col gap-0">
-                {/* Main card — stacked on mobile, 4-col grid on sm+ */}
+                {/* Main card */}
                 <div
                   className={`border border-neutral-200 border-l-[3px] hover:shadow-sm transition-all ${accent} ${conflictingBookings.length > 0 ? 'rounded-t-2xl rounded-b-none border-b-0' : 'rounded-2xl'}`}
                 >
                   {/* Mobile layout */}
-                  <div className="block sm:hidden px-4 py-3.5">
-                    <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="block sm:hidden px-4 py-4">
+                    <div className="flex items-start justify-between gap-2 mb-2.5">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-xl bg-neutral-900 flex items-center justify-center flex-shrink-0">
-                          <span className="text-[11px] font-bold text-white">{(b.title || 'M').charAt(0).toUpperCase()}</span>
+                        <div className="w-9 h-9 rounded-xl bg-neutral-900 flex items-center justify-center flex-shrink-0">
+                          <span className="text-[12px] font-bold text-white">{(b.title || 'M').charAt(0).toUpperCase()}</span>
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[13px] font-bold text-black truncate leading-tight">{b.title}</p>
-                          <p className="text-[10px] text-neutral-400 truncate">{b.ownerEmail}</p>
+                          <p className="text-[14px] font-bold text-black truncate leading-tight">{b.title}</p>
+                          <p className="text-[11px] text-neutral-400 truncate">{b.ownerEmail}</p>
                         </div>
                       </div>
                       {statusInfo ? (
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-xl text-[10px] font-bold flex-shrink-0 ${statusInfo.cls}`}>
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] font-bold flex-shrink-0 ${statusInfo.cls}`}>
                           <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dot}`} />
                           {statusInfo.label}
                         </span>
@@ -1075,7 +1105,7 @@ function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove
                         <span className="text-[11px] text-neutral-400">{b.status ?? '—'}</span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex flex-wrap items-center gap-2">
                       {b.clientName && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 border border-amber-200 rounded-lg">
                           <Building2 size={9} className="text-amber-600" />
@@ -1083,7 +1113,8 @@ function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove
                         </span>
                       )}
                       <span className="text-[11px] text-neutral-500 font-medium">{b.room}</span>
-                      <span className="text-[11px] text-neutral-400">{fmtDate(b.date)} · {minsToAmPm(b.startMinutes)}–{minsToAmPm(b.endMinutes)}</span>
+                      <span className="text-[11px] text-neutral-400">{fmtDate(b.date)}</span>
+                      <span className="text-[11px] text-neutral-400">{minsToAmPm(b.startMinutes)}–{minsToAmPm(b.endMinutes)}</span>
                     </div>
                   </div>
 
@@ -1127,7 +1158,7 @@ function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove
                   </div>
                 </div>
 
-                {/* ── Override sub-panels (one per conflicting booking) ── */}
+                {/* ── Override sub-panels — vertical on mobile ── */}
                 {conflictingBookings.map((cb, cbIdx) => {
                   const overrideKey   = `${b.id}_${cb.id}`
                   const waitedMs      = b.createdAt?.toMillis ? now - b.createdAt.toMillis() : 0
@@ -1136,61 +1167,73 @@ function ClientMeetingsTab({ bookings, meetingHistory = [], adminOverrideApprove
                   const canOverride   = waitedMs >= 5 * 60_000
                   const isLast        = cbIdx === conflictingBookings.length - 1
                   return (
-                    <div key={cb.id} className={`border border-neutral-200 border-l-[3px] px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 ${isLast ? 'rounded-b-2xl' : ''} ${
+                    <div key={cb.id} className={`border border-neutral-200 border-l-[3px] ${isLast ? 'rounded-b-2xl' : ''} ${
                       canOverride
                         ? 'bg-red-50 border-l-red-500 border-t-red-100'
                         : 'bg-neutral-50 border-l-neutral-300 border-t-neutral-100'
                     }`}>
-                      <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                        <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 animate-pulse ${canOverride ? 'bg-red-500' : 'bg-amber-400'}`} />
-                        <div className="min-w-0">
-                          <p className="text-[11px] font-bold text-neutral-700 truncate">
-                            Clashing with: &ldquo;{cb.title}&rdquo;
-                          </p>
-                          <p className="text-[10px] text-neutral-500 truncate">
-                            Owner: {cb.ownerEmail} · Waiting {minsWaited}m
-                          </p>
-                        </div>
-                      </div>
-                      {canOverride ? (
-                        <div className="flex items-center gap-3 flex-shrink-0">
-                          <div className="flex flex-col items-start sm:items-end">
-                            <p className="text-[11px] font-bold text-red-700">No action for {minsWaited} min</p>
-                            <p className="text-[10px] text-red-500">Owner has not responded</p>
+                      {/* Mobile: fully vertical stack */}
+                      <div className="px-4 py-3 flex flex-col gap-3">
+                        {/* Clash info row */}
+                        <div className="flex items-start gap-2.5">
+                          <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1 animate-pulse ${canOverride ? 'bg-red-500' : 'bg-amber-400'}`} />
+                          <div className="min-w-0">
+                            <p className="text-[12px] font-bold text-neutral-700 break-words">
+                              Clashing with: &ldquo;{cb.title}&rdquo;
+                            </p>
+                            <p className="text-[11px] text-neutral-500 mt-0.5">
+                              Owner: {cb.ownerEmail} · Waited {minsWaited}m
+                            </p>
                           </div>
-                          <button
-                            disabled={!!overriding[overrideKey]}
-                            onClick={async () => {
-                              setOverriding(o => ({ ...o, [overrideKey]: true }))
-                              try {
-                                await adminOverrideApprove?.(cb, b)
-                              } finally {
-                                setOverriding(o => ({ ...o, [overrideKey]: false }))
+                        </div>
+
+                        {canOverride ? (
+                          <>
+                            {/* Progress bar (full width) + label */}
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center justify-between">
+                                <p className="text-[11px] font-bold text-red-700">No action for {minsWaited} min</p>
+                                <p className="text-[10px] text-red-500">Owner unresponsive</p>
+                              </div>
+                              <div className="w-full h-1.5 bg-red-200 rounded-full overflow-hidden">
+                                <div className="h-full bg-red-500 rounded-full w-full" />
+                              </div>
+                            </div>
+                            {/* Full-width override button */}
+                            <button
+                              disabled={!!overriding[overrideKey]}
+                              onClick={async () => {
+                                setOverriding(o => ({ ...o, [overrideKey]: true }))
+                                try {
+                                  await adminOverrideApprove?.(cb, b)
+                                } finally {
+                                  setOverriding(o => ({ ...o, [overrideKey]: false }))
+                                }
+                              }}
+                              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-[13px] font-bold rounded-xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                              {overriding[overrideKey]
+                                ? <Loader2 size={14} className="animate-spin" />
+                                : <Trash2 size={14} />
                               }
-                            }}
-                            className="flex items-center gap-1.5 px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white text-[12px] font-bold rounded-xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
-                          >
-                            {overriding[overrideKey]
-                              ? <Loader2 size={12} className="animate-spin" />
-                              : <Trash2 size={12} />
-                            }
-                            Admin Override
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <div className="flex flex-col items-start sm:items-end">
-                            <p className="text-[11px] font-semibold text-neutral-600">Override in {minsRemaining} min</p>
-                            <p className="text-[10px] text-neutral-400">Waiting for owner action</p>
+                              Admin Override
+                            </button>
+                          </>
+                        ) : (
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex items-center justify-between">
+                              <p className="text-[11px] font-semibold text-neutral-600">Override available in {minsRemaining} min</p>
+                              <p className="text-[10px] text-neutral-400">Waiting for owner</p>
+                            </div>
+                            <div className="w-full h-1.5 bg-neutral-200 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-amber-400 rounded-full transition-all"
+                                style={{ width: `${Math.min(100, (minsWaited / 5) * 100)}%` }}
+                              />
+                            </div>
                           </div>
-                          <div className="w-20 h-1.5 bg-neutral-200 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-amber-400 rounded-full transition-all"
-                              style={{ width: `${Math.min(100, (minsWaited / 5) * 100)}%` }}
-                            />
-                          </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   )
                 })}
@@ -1337,37 +1380,43 @@ function SettingsTab() {
       </div>
 
       <form onSubmit={handleSave} className="flex flex-col gap-4">
+        {/* Booking Rules */}
         <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
           <div className="px-5 py-4 border-b border-neutral-100">
             <p className="text-[12px] font-bold text-black">Booking Rules</p>
           </div>
           <div className="px-5 py-4 flex flex-col gap-4">
-            <div className="flex items-center justify-between gap-4">
+            {/* Max duration */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <p className="text-[13px] font-semibold text-black">Max booking duration</p>
                 <p className="text-[11px] text-neutral-400 mt-0.5">Maximum minutes per single booking</p>
               </div>
               <div className="flex items-center gap-2">
                 <input type="number" min="15" max="480" step="15" value={config.maxBookingDurationMins}
-                  onChange={set('maxBookingDurationMins')} className="w-20 px-3 py-2 rounded-xl border border-neutral-200 text-sm text-right focus:outline-none focus:border-black transition-all" />
-                <span className="text-[12px] text-neutral-400">min</span>
+                  onChange={set('maxBookingDurationMins')}
+                  className="w-24 px-3 py-2.5 rounded-xl border border-neutral-200 text-base md:text-sm text-right focus:outline-none focus:border-black transition-all" />
+                <span className="text-[12px] text-neutral-400 flex-shrink-0">min</span>
               </div>
             </div>
             <div className="h-px bg-neutral-100" />
-            <div className="flex items-center justify-between gap-4">
+            {/* Max days ahead */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <p className="text-[13px] font-semibold text-black">Max days ahead</p>
                 <p className="text-[11px] text-neutral-400 mt-0.5">How far in advance users can book</p>
               </div>
               <div className="flex items-center gap-2">
                 <input type="number" min="1" max="365" value={config.maxDaysAhead}
-                  onChange={set('maxDaysAhead')} className="w-20 px-3 py-2 rounded-xl border border-neutral-200 text-sm text-right focus:outline-none focus:border-black transition-all" />
-                <span className="text-[12px] text-neutral-400">days</span>
+                  onChange={set('maxDaysAhead')}
+                  className="w-24 px-3 py-2.5 rounded-xl border border-neutral-200 text-base md:text-sm text-right focus:outline-none focus:border-black transition-all" />
+                <span className="text-[12px] text-neutral-400 flex-shrink-0">days</span>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Working Hours */}
         <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
           <div className="px-5 py-4 border-b border-neutral-100">
             <p className="text-[12px] font-bold text-black">Working Hours</p>
@@ -1377,13 +1426,13 @@ function SettingsTab() {
               { label: 'Start hour', desc: 'Earliest time users can book', key: 'workStartHour', hours: Array.from({ length: 13 }, (_, i) => i + 5) },
               { label: 'End hour',   desc: 'Latest time users can book',   key: 'workEndHour',   hours: Array.from({ length: 13 }, (_, i) => i + 12) },
             ].map(({ label, desc, key, hours }) => (
-              <div key={key} className="flex items-center justify-between gap-4">
+              <div key={key} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div>
                   <p className="text-[13px] font-semibold text-black">{label}</p>
                   <p className="text-[11px] text-neutral-400 mt-0.5">{desc}</p>
                 </div>
                 <select value={config[key]} onChange={set(key)}
-                  className="px-3 py-2 rounded-xl border border-neutral-200 text-sm text-black bg-white focus:outline-none focus:border-black transition-all cursor-pointer">
+                  className="w-full sm:w-auto px-3 py-2.5 rounded-xl border border-neutral-200 text-base md:text-sm text-black bg-white focus:outline-none focus:border-black transition-all cursor-pointer">
                   {hours.map(h => (
                     <option key={h} value={h}>{hourLabel(h)}</option>
                   ))}
@@ -1400,7 +1449,7 @@ function SettingsTab() {
             <p className="text-[11px] text-neutral-400 mt-0.5">Selected days will be hidden from the calendar and booking form</p>
           </div>
           <div className="px-5 py-4">
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-4 sm:flex gap-2 flex-wrap">
               {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((label, i) => {
                 const isOff = (config.offDays ?? []).includes(i)
                 return (
@@ -1411,7 +1460,7 @@ function SettingsTab() {
                         ? (c.offDays ?? []).filter(d => d !== i)
                         : [...(c.offDays ?? []), i],
                     }))}
-                    className={`px-4 py-2 rounded-xl text-[12px] font-semibold border transition-all
+                    className={`py-2.5 rounded-xl text-[13px] font-semibold border transition-all
                       ${isOff
                         ? 'bg-black text-white border-black'
                         : 'bg-white text-neutral-600 border-neutral-200 hover:border-neutral-400'}`}>
@@ -1433,15 +1482,15 @@ function SettingsTab() {
             <p className="text-[11px] text-neutral-400 mt-0.5">Shown in the signup and profile forms</p>
           </div>
           <div className="px-5 py-4 flex flex-col gap-3">
-            <div className="flex flex-wrap gap-2 min-h-[32px]">
+            <div className="flex flex-wrap gap-2 min-h-[36px]">
               {(config.companies ?? []).map(company => (
-                <span key={company} className="flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 bg-neutral-100 border border-neutral-200 rounded-xl text-[12px] font-semibold text-black">
+                <span key={company} className="flex items-center gap-2 pl-3 pr-2 py-2 bg-neutral-100 border border-neutral-200 rounded-xl text-[13px] font-semibold text-black">
                   {company}
                   <button type="button" onClick={() => removeCompany(company)}
                     disabled={(config.companies ?? []).length <= 1}
                     title="Remove"
-                    className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-neutral-300 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
-                    <X size={10} />
+                    className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-neutral-300 active:bg-neutral-400 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0">
+                    <X size={11} />
                   </button>
                 </span>
               ))}
@@ -1467,15 +1516,15 @@ function SettingsTab() {
           </div>
         </div>
 
-        {/* Manual booking clear */}
+        {/* Clear Booking Data */}
         <div className="bg-white border border-neutral-200 rounded-2xl">
           <div className="px-5 py-4 border-b border-neutral-100">
             <p className="text-[12px] font-bold text-black">Clear Booking Data</p>
             <p className="text-[11px] text-neutral-400 mt-0.5">Permanently delete all bookings up to and including the selected date</p>
           </div>
           <div className="px-5 py-4 flex flex-col gap-3">
-            <div className="flex items-end gap-3">
-              <div className="w-52">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+              <div className="w-full sm:w-52">
                 <DatePicker
                   value={clearDate}
                   onChange={e => { setClearDate(e.target.value); setClearResult('') }}
@@ -1485,7 +1534,7 @@ function SettingsTab() {
                 type="button"
                 disabled={!clearDate || clearing}
                 onClick={() => setClearConfirm(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-red-500 text-white text-[13px] font-semibold rounded-xl hover:bg-red-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0">
+                className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-3 bg-red-500 text-white text-[13px] font-semibold rounded-xl hover:bg-red-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                 {clearing ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
                 Clear Bookings
               </button>
@@ -1501,10 +1550,10 @@ function SettingsTab() {
           </div>
         </div>
 
-        {/* Confirm modal */}
+        {/* Confirm clear modal — bottom sheet on mobile */}
         {clearConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl border border-neutral-200 shadow-2xl p-6 w-full max-w-sm flex flex-col gap-4">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/40 backdrop-blur-sm">
+            <div className="bg-white rounded-t-2xl sm:rounded-2xl border border-neutral-200 shadow-2xl p-6 w-full sm:max-w-sm flex flex-col gap-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
                   <AlertTriangle size={18} className="text-red-500" />
@@ -1518,11 +1567,11 @@ function SettingsTab() {
               </div>
               <div className="flex gap-3">
                 <button onClick={handleClear} disabled={clearing}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 text-[13px] font-semibold text-white bg-red-500 rounded-xl hover:bg-red-600 transition-colors disabled:opacity-60">
+                  className="flex-1 flex items-center justify-center gap-2 py-3 text-[13px] font-semibold text-white bg-red-500 rounded-xl hover:bg-red-600 transition-colors disabled:opacity-60">
                   {clearing ? <Loader2 size={13} className="animate-spin" /> : 'Yes, Delete'}
                 </button>
                 <button onClick={() => setClearConfirm(false)}
-                  className="flex-1 py-2.5 text-[13px] font-semibold text-neutral-600 bg-neutral-100 rounded-xl hover:bg-neutral-200 transition-colors">
+                  className="flex-1 py-3 text-[13px] font-semibold text-neutral-600 bg-neutral-100 rounded-xl hover:bg-neutral-200 transition-colors">
                   Cancel
                 </button>
               </div>
@@ -1532,7 +1581,7 @@ function SettingsTab() {
 
         <div className="flex items-center gap-3 flex-wrap">
           <button type="submit" disabled={saving}
-            className="flex items-center gap-2 px-5 py-2.5 bg-black text-white text-[13px] font-semibold rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-60">
+            className="flex items-center gap-2 px-5 py-3 bg-black text-white text-[13px] font-semibold rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-60 w-full sm:w-auto justify-center">
             {saving ? <Loader2 size={13} className="animate-spin" /> : <><Check size={14} /> Save Settings</>}
           </button>
           {saved     && <span className="text-[12px] text-green-600 font-semibold">Settings saved!</span>}
@@ -1548,7 +1597,7 @@ export default function AdminPanel({ rooms, bookings, onAddRoom, onRemoveRoom, o
   const [activeTab, setActiveTab] = useState('users')
 
   return (
-    <div className="flex flex-col gap-6 pb-10">
+    <div className="flex flex-col gap-6 pb-24 md:pb-10">
 
       {/* Header */}
       <div className="flex items-center gap-4">
@@ -1561,8 +1610,8 @@ export default function AdminPanel({ rooms, bookings, onAddRoom, onRemoveRoom, o
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-0 border-b border-neutral-200 overflow-x-auto">
+      {/* Desktop tab bar (hidden below md) */}
+      <div className="hidden md:flex gap-0 border-b border-neutral-200">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setActiveTab(id)}
             className={`relative flex items-center gap-2 px-5 py-3 text-[13px] font-semibold whitespace-nowrap transition-all ${
@@ -1586,6 +1635,29 @@ export default function AdminPanel({ rooms, bookings, onAddRoom, onRemoveRoom, o
       {activeTab === 'client_meetings' && <ClientMeetingsTab bookings={bookings} meetingHistory={meetingHistory} adminOverrideApprove={adminOverrideApprove} />}
       {activeTab === 'analytics'       && <AnalyticsTab      bookings={bookings} rooms={rooms} />}
       {activeTab === 'settings'        && <SettingsTab />}
+
+      {/* Mobile sticky bottom nav (hidden md+) */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white border-t border-neutral-200 safe-area-inset-bottom">
+        <div className="grid grid-cols-6">
+          {TABS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={`flex flex-col items-center justify-center gap-0.5 py-2.5 min-h-[56px] transition-colors ${
+                activeTab === id
+                  ? 'text-indigo-600'
+                  : 'text-neutral-400 active:text-neutral-600'
+              }`}
+            >
+              <Icon size={20} strokeWidth={activeTab === id ? 2.2 : 1.8} />
+              <span className="text-[10px] font-semibold leading-tight">{label}</span>
+              {activeTab === id && (
+                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-indigo-600 rounded-b-full" />
+              )}
+            </button>
+          ))}
+        </div>
+      </nav>
     </div>
   )
 }
