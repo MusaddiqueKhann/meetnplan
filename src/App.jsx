@@ -343,7 +343,7 @@ export default function App() {
 
     const isAutoTimeout = rejectingUserEmail === 'system'
     const message = isAutoTimeout
-      ? `Your client meeting "${pb.title}" was automatically rejected — no response was received before the 15-minute deadline.`
+      ? `Your client meeting "${pb.title}" was automatically rejected — no response was received before the 45-minute deadline.`
       : `Your client meeting "${pb.title}" request was rejected by ${rejectingUserEmail}. The requested time slot remains occupied.`
 
     await sendNotification({
@@ -372,13 +372,13 @@ export default function App() {
   }, [sendNotification, logHistory])
 
 
-  // Auto-reject pending_priority_approval requests 15 minutes before their
+  // Auto-reject pending_priority_approval requests 45 minutes before their
   // start time to prevent deadlocks when owners fail to respond.
   useEffect(() => {
     if (!firebaseUser) return
     const checkTimeouts = async () => {
       const nowMs    = Date.now()
-      const deadline = 15 * 60 * 1000
+      const deadline = 45 * 60 * 1000
       const expired  = bookingsRef.current.filter(b => {
         if (b.status !== 'pending_priority_approval') return false
         const parts = (b.date || '').split('-').map(Number)
@@ -387,7 +387,7 @@ export default function App() {
         return nowMs >= startMs - deadline
       })
       for (const pb of expired) {
-        await rejectPriorityRequest(pb.id, 'system', 'Auto-rejected: approval deadline passed (15 min before meeting start)')
+        await rejectPriorityRequest(pb.id, 'system', 'Auto-rejected: approval deadline passed (45 min before meeting start)')
       }
     }
     const id = setInterval(checkTimeouts, 60_000)
