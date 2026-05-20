@@ -184,7 +184,7 @@ export default function MyMeetings({
 
       {/* Meeting list card */}
       <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-neutral-100 flex items-center gap-2">
+        <div className="px-4 sm:px-6 py-4 border-b border-neutral-100 flex items-center gap-2">
           <CalendarDays size={15} className="text-neutral-400" />
           <h2 className="text-[13px] font-bold text-black">All Meetings</h2>
           <span className="ml-auto text-[11px] font-semibold text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">
