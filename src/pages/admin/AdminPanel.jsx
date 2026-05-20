@@ -1453,7 +1453,7 @@ function SettingsTab() {
             <p className="text-[11px] text-neutral-400 mt-0.5">Selected days will be hidden from the calendar and booking form</p>
           </div>
           <div className="px-5 py-4">
-            <div className="grid grid-cols-4 sm:flex gap-2 flex-wrap">
+            <div className="flex flex-wrap gap-2">
               {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((label, i) => {
                 const isOff = (config.offDays ?? []).includes(i)
                 return (
@@ -1464,10 +1464,10 @@ function SettingsTab() {
                         ? (c.offDays ?? []).filter(d => d !== i)
                         : [...(c.offDays ?? []), i],
                     }))}
-                    className={`py-2.5 rounded-xl text-[13px] font-semibold border transition-all
+                    className={`w-14 h-10 flex items-center justify-center rounded-xl text-[13px] font-semibold border transition-all
                       ${isOff
                         ? 'bg-black text-white border-black'
-                        : 'bg-white text-neutral-600 border-neutral-200 hover:border-neutral-400'}`}>
+                        : 'bg-white text-neutral-600 border-neutral-200 hover:border-neutral-400 hover:bg-neutral-50'}`}>
                     {label}
                   </button>
                 )
