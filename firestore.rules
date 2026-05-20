@@ -45,6 +45,11 @@ service cloud.firestore {
         (resource.data.status == 'approved' &&
          request.resource.data.status == 'cancelled' &&
          request.resource.data.cancelledByPriorityId != null) ||
+        // Atomic rollback: restore a rescheduled booking to its original slot when
+        // a priority request it had cleared for is rejected by another party.
+        (resource.data.status == 'rescheduled' &&
+         request.resource.data.status == 'approved' &&
+         request.resource.data.keys().hasAny(['restoredAt'])) ||
         // Legacy: restoring a waiting_for_action booking to approved
         (resource.data.status == 'waiting_for_action' &&
          request.resource.data.status == 'approved' &&

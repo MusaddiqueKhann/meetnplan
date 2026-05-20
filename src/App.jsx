@@ -185,6 +185,23 @@ export default function App() {
         status:              'pending_priority_approval',
         conflictsWithIds:    conflicts.map(c => c.id),
         approvedConflictIds: [],
+        // Full snapshots of conflicting bookings at request time — used to
+        // restore original slots atomically if any party rejects.
+        conflictSnapshots:   conflicts.map(c => ({
+          id:          c.id,
+          title:       c.title,
+          room:        c.room,
+          date:        c.date,
+          startMinutes: c.startMinutes,
+          endMinutes:  c.endMinutes,
+          coordinator: c.coordinator,
+          companyName: c.companyName ?? '',
+          ownerEmail:  c.ownerEmail,
+          ownerUid:    c.ownerUid ?? '',
+          meetingType: c.meetingType ?? 'internal',
+          clientName:  c.clientName ?? null,
+          createdAt:   c.createdAt ?? null,
+        })),
         createdAt:           serverTimestamp(),
       })
       // Existing meetings are NOT changed — they remain 'approved' and fully visible.
@@ -321,18 +338,72 @@ export default function App() {
   }, [promotePriorityToConfirmed])
 
   // Called when a conflicting meeting owner rejects the override.
-  // Instant rejection: the entire priority request is rejected immediately,
-  // regardless of other owners who may have already approved.
+  // Atomic rejection + global rollback:
+  //   1. Mark priority booking rejected.
+  //   2. Detect which conflicting bookings were already "cleared" (deleted or
+  //      rescheduled away from the conflict slot) and restore them in the same
+  //      batch — no original slot is permanently lost.
+  //   3. Notify every restored owner so they know their slot is back.
   const rejectPriorityRequest = useCallback(async (priorityBookingId, rejectingUserEmail, autoRejectReason = null) => {
     const pb = bookingsRef.current.find(b => b.id === priorityBookingId)
     if (!pb || pb.status !== 'pending_priority_approval') return
 
+    // Build the list of snapshots whose owners already cleared the conflict slot.
+    const snapshots = Array.isArray(pb.conflictSnapshots) ? pb.conflictSnapshots : []
+    const cleared = []
+    for (const snap of snapshots) {
+      const current = bookingsRef.current.find(b => b.id === snap.id)
+      const stillBlocking = current &&
+        (current.status === 'approved' || current.status === 'rescheduled') &&
+        current.date         === pb.date &&
+        current.room         === pb.room &&
+        current.startMinutes  < pb.endMinutes &&
+        current.endMinutes    > pb.startMinutes
+      if (!stillBlocking) cleared.push({ snap, current })
+    }
+
     const batch = writeBatch(db)
+
+    // Reject the priority booking
     batch.update(doc(db, 'bookings', priorityBookingId), {
       status:     'rejected',
       rejectedAt: serverTimestamp(),
       rejectedBy: rejectingUserEmail,
     })
+
+    // Atomically restore every cleared booking to its original slot
+    for (const { snap, current } of cleared) {
+      if (!current) {
+        // Booking was deleted — re-create it with the original data
+        batch.set(doc(db, 'bookings', snap.id), {
+          title:       snap.title,
+          room:        snap.room,
+          date:        snap.date,
+          startMinutes: snap.startMinutes,
+          endMinutes:  snap.endMinutes,
+          coordinator: snap.coordinator,
+          companyName: snap.companyName ?? '',
+          ownerEmail:  snap.ownerEmail,
+          ownerUid:    snap.ownerUid ?? '',
+          meetingType: snap.meetingType ?? 'internal',
+          clientName:  snap.clientName ?? null,
+          status:      'approved',
+          createdAt:   snap.createdAt ?? null,
+          restoredAt:  serverTimestamp(),
+        })
+      } else {
+        // Booking was rescheduled away — revert to original slot
+        batch.update(doc(db, 'bookings', snap.id), {
+          date:         snap.date,
+          startMinutes: snap.startMinutes,
+          endMinutes:   snap.endMinutes,
+          room:         snap.room,
+          status:       'approved',
+          restoredAt:   serverTimestamp(),
+        })
+      }
+    }
+
     await batch.commit()
 
     // Dismiss this user's own priority_request notification
@@ -340,6 +411,21 @@ export default function App() {
       n.type === 'priority_request' && n.relatedBookingId === priorityBookingId && !n.read
     )
     if (myNotif?.id) await updateDoc(doc(db, 'notifications', myNotif.id), { read: true })
+
+    // Notify each restored owner — targeted, only to those who had cleared
+    for (const { snap } of cleared) {
+      if (snap.ownerEmail && snap.ownerEmail !== rejectingUserEmail) {
+        await sendNotification({
+          toEmail:          snap.ownerEmail,
+          toUid:            snap.ownerUid ?? '',
+          fromEmail:        'system',
+          type:             'slot_restored',
+          message:          `The priority client meeting "${pb.title}" was rejected. Your original meeting slot has been safely restored.`,
+          bookingId:        snap.id,
+          relatedBookingId: priorityBookingId,
+        })
+      }
+    }
 
     const isAutoTimeout = rejectingUserEmail === 'system'
     const message = isAutoTimeout
@@ -356,18 +442,19 @@ export default function App() {
     })
 
     await logHistory({
-      bookingId:        priorityBookingId,
-      bookingTitle:     pb.title,
-      action:           'rejected',
-      performedBy:      rejectingUserEmail,
-      performedByEmail: rejectingUserEmail,
-      meetingType:      'client',
-      clientName:       pb.clientName ?? '',
-      room:             pb.room,
-      date:             pb.date,
-      startMinutes:     pb.startMinutes,
-      endMinutes:       pb.endMinutes,
-      reason:           autoRejectReason ?? `Rejected by ${rejectingUserEmail}`,
+      bookingId:          priorityBookingId,
+      bookingTitle:       pb.title,
+      action:             'rejected',
+      performedBy:        rejectingUserEmail,
+      performedByEmail:   rejectingUserEmail,
+      meetingType:        'client',
+      clientName:         pb.clientName ?? '',
+      room:               pb.room,
+      date:               pb.date,
+      startMinutes:       pb.startMinutes,
+      endMinutes:         pb.endMinutes,
+      reason:             autoRejectReason ?? `Rejected by ${rejectingUserEmail}`,
+      restoredBookingIds: cleared.map(({ snap }) => snap.id),
     })
   }, [sendNotification, logHistory])
 
